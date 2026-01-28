@@ -18,6 +18,7 @@ type Work struct {
 	URLs             []*string
 	TagIDs           []uuid.UUID
 	Tags             []*Tag
+	Collaborators    []*User
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

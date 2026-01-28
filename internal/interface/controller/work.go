@@ -201,6 +201,7 @@ func (wc *WorkController) CreateWork(c echo.Context) error {
 		input.URLs,
 		userID,
 		input.TagIDs,
+		input.CollaboratorIDs,
 	)
 	if err != nil {
 		c.Logger().Error("WorkUseCase.CreateWork error:", err)
@@ -247,7 +248,7 @@ func (wc *WorkController) UpdateWork(c echo.Context) error {
 		return handleWorkError(c, domainerrors.ErrInvalidRequestBody)
 	}
 
-	updatedWork, err := wc.workUsecase.UpdateWork(c.Request().Context(), workID, userID, input.Title, input.Description, input.Visibility, input.ThumbnailAssetID, input.AssetIDs, input.URLs, input.TagIDs)
+	updatedWork, err := wc.workUsecase.UpdateWork(c.Request().Context(), workID, userID, input.Title, input.Description, input.Visibility, input.ThumbnailAssetID, input.AssetIDs, input.URLs, input.TagIDs, input.CollaboratorIDs)
 	if err != nil {
 		return handleWorkError(c, err)
 	}
@@ -307,6 +308,8 @@ func handleWorkError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "作品の取得に失敗しました")
 	case errors.Is(err, domainerrors.ErrWorkNotFound):
 		return echo.NewHTTPError(http.StatusNotFound, "作品が見つかりませんでした")
+	case errors.Is(err, domainerrors.ErrUserNotFound):
+		return echo.NewHTTPError(http.StatusNotFound, "ユーザーが見つかりませんでした")
 	case errors.Is(err, domainerrors.ErrFailedToBeginTransaction):
 		return echo.NewHTTPError(http.StatusInternalServerError, "トランザクションの開始に失敗しました")
 	case errors.Is(err, domainerrors.ErrFailedToCommitTransaction):
@@ -321,6 +324,8 @@ func handleWorkError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "存在しないタグIDが含まれています")
 	case errors.Is(err, domainerrors.ErrInvalidTagIDs):
 		return echo.NewHTTPError(http.StatusBadRequest, "タグが指定されていません")
+	case errors.Is(err, domainerrors.ErrOwnerCannotBeCollaborator):
+		return echo.NewHTTPError(http.StatusBadRequest, "作品のオーナーを共同制作者として追加することはできません")
 	case errors.Is(err, domainerrors.ErrWorkNotOwnedByUser):
 		return echo.NewHTTPError(http.StatusForbidden, "この作品を削除する権限がありません")
 	case errors.Is(err, domainerrors.ErrFailedToDeleteWork):

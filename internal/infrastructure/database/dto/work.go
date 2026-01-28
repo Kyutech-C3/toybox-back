@@ -22,6 +22,7 @@ type Work struct {
 	URLs             []*URLInfo       `bun:"rel:has-many,join:id=work_id"`
 	Tags             []*Tag           `bun:"m2m:tagging,join:Work=Tag"`
 	TagIDs           []uuid.UUID      `bun:"-"`
+	Collaborators    []*User          `bun:"m2m:collaborator"`
 	UserID           uuid.UUID        `bun:"user_id,notnull"`
 	CreatedAt        time.Time        `bun:"created_at,notnull"`
 	UpdatedAt        time.Time        `bun:"updated_at,notnull"`
@@ -45,18 +46,24 @@ func (w *Work) ToWorkEntity() *entity.Work {
 		tagIDs[i] = tag.ID
 	}
 
+	collaborators := make([]*entity.User, len(w.Collaborators))
+	for i, collaborator := range w.Collaborators {
+		collaborators[i] = collaborator.ToUserEntity()
+	}
+
 	return &entity.Work{
-		ID:          w.ID,
-		Title:       w.Title,
-		Description: w.Description,
-		UserID:      w.UserID,
-		Visibility:  string(w.Visibility),
-		Assets:      assets,
-		URLs:        urls,
-		TagIDs:      tagIDs,
-		Tags:        entityTags,
-		CreatedAt:   w.CreatedAt,
-		UpdatedAt:   w.UpdatedAt,
+		ID:            w.ID,
+		Title:         w.Title,
+		Description:   w.Description,
+		UserID:        w.UserID,
+		Visibility:    string(w.Visibility),
+		Assets:        assets,
+		URLs:          urls,
+		TagIDs:        tagIDs,
+		Tags:          entityTags,
+		Collaborators: collaborators,
+		CreatedAt:     w.CreatedAt,
+		UpdatedAt:     w.UpdatedAt,
 	}
 }
 
@@ -76,6 +83,11 @@ func ToWorkDTO(entity *entity.Work) *Work {
 		tags[i] = ToTagDTO(tag)
 	}
 
+	collaborators := make([]*User, len(entity.Collaborators))
+	for i, collaborator := range entity.Collaborators {
+		collaborators[i] = ToUserDTO(collaborator)
+	}
+
 	return &Work{
 		ID:               entity.ID,
 		Title:            entity.Title,
@@ -87,6 +99,7 @@ func ToWorkDTO(entity *entity.Work) *Work {
 		URLs:             urls,
 		Tags:             tags,
 		TagIDs:           entity.TagIDs,
+		Collaborators:    collaborators,
 		CreatedAt:        entity.CreatedAt,
 		UpdatedAt:        entity.UpdatedAt,
 	}

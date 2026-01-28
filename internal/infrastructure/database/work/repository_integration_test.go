@@ -721,3 +721,133 @@ func insertTestAsset(t *testing.T, db *bun.DB, userID uuid.UUID) *entity.Asset {
 
 	return asset
 }
+
+func TestWorkRepository_Create_WithCollaborators(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	owner := insertTestUser(t, db)
+	collaborator1 := insertTestUser(t, db)
+	collaborator2 := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test")
+
+	work := newTestWork(owner.ID, "work-with-collaborators")
+	work.TagIDs = []uuid.UUID{tag.ID}
+	work.Tags = []*entity.Tag{tag}
+	work.Collaborators = []*entity.User{collaborator1, collaborator2}
+
+	created, err := repo.Create(ctx, work)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(created.Collaborators))
+
+	// DBから取得して共同制作者が正しく保存されているか確認
+	fetched, err := repo.GetByID(ctx, created.ID)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(fetched.Collaborators))
+
+	// 共同制作者のIDを確認
+	collaboratorIDs := make(map[uuid.UUID]bool)
+	for _, c := range fetched.Collaborators {
+		collaboratorIDs[c.ID] = true
+	}
+	require.True(t, collaboratorIDs[collaborator1.ID])
+	require.True(t, collaboratorIDs[collaborator2.ID])
+}
+
+func TestWorkRepository_GetByID_WithCollaborators(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	owner := insertTestUser(t, db)
+	collaborator := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test")
+
+	work := newTestWork(owner.ID, "work-with-one-collaborator")
+	work.TagIDs = []uuid.UUID{tag.ID}
+	work.Tags = []*entity.Tag{tag}
+	work.Collaborators = []*entity.User{collaborator}
+
+	created, err := repo.Create(ctx, work)
+	require.NoError(t, err)
+
+	// GetByIDで共同制作者がロードされることを確認
+	fetched, err := repo.GetByID(ctx, created.ID)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(fetched.Collaborators))
+	require.Equal(t, collaborator.ID, fetched.Collaborators[0].ID)
+	require.Equal(t, collaborator.DisplayName, fetched.Collaborators[0].DisplayName)
+}
+
+func TestWorkRepository_Update_Collaborators(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	owner := insertTestUser(t, db)
+	collaborator1 := insertTestUser(t, db)
+	collaborator2 := insertTestUser(t, db)
+	collaborator3 := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test")
+
+	// 共同制作者1,2で作品作成
+	work := newTestWork(owner.ID, "work-to-update-collaborators")
+	work.TagIDs = []uuid.UUID{tag.ID}
+	work.Tags = []*entity.Tag{tag}
+	work.Collaborators = []*entity.User{collaborator1, collaborator2}
+
+	created, err := repo.Create(ctx, work)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(created.Collaborators))
+
+	// 共同制作者を2,3に更新
+	created.Collaborators = []*entity.User{collaborator2, collaborator3}
+	updated, err := repo.Update(ctx, created)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(updated.Collaborators))
+
+	// DBから取得して確認
+	fetched, err := repo.GetByID(ctx, created.ID)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(fetched.Collaborators))
+
+	// 共同制作者が正しく更新されているか確認
+	collaboratorIDs := make(map[uuid.UUID]bool)
+	for _, c := range fetched.Collaborators {
+		collaboratorIDs[c.ID] = true
+	}
+	require.False(t, collaboratorIDs[collaborator1.ID], "collaborator1は削除されている")
+	require.True(t, collaboratorIDs[collaborator2.ID], "collaborator2は残っている")
+	require.True(t, collaboratorIDs[collaborator3.ID], "collaborator3が追加されている")
+}
+
+func TestWorkRepository_Delete_CascadeCollaborators(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	owner := insertTestUser(t, db)
+	collaborator := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test")
+
+	work := newTestWork(owner.ID, "work-to-delete-with-collaborators")
+	work.TagIDs = []uuid.UUID{tag.ID}
+	work.Tags = []*entity.Tag{tag}
+	work.Collaborators = []*entity.User{collaborator}
+
+	created, err := repo.Create(ctx, work)
+	require.NoError(t, err)
+
+	// 作品削除
+	err = repo.Delete(ctx, created.ID, owner.ID)
+	require.NoError(t, err)
+
+	// collaboratorテーブルのレコードも削除されていることを確認
+	count, err := db.NewSelect().
+		Table("collaborator").
+		Where("work_id = ?", created.ID).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, count, "作品削除時にcollaboratorレコードも削除される")
+}

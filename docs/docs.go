@@ -961,6 +961,20 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.CollaboratorResponse": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_simesaba80_toybox-back_internal_interface_schema.CommentResponse": {
             "type": "object",
             "properties": {
@@ -1040,6 +1054,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "asset_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "collaborator_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -1163,6 +1183,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.AssetResponse"
                     }
                 },
+                "collaborators": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.CollaboratorResponse"
+                    }
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -1242,6 +1268,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "asset_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "collaborator_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"

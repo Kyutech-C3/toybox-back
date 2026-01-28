@@ -14,8 +14,8 @@ type IWorkUseCase interface {
 	GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, error)
-	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID) (*entity.Work, error)
-	UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID) (*entity.Work, error)
+	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error)
+	UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID, collaboratorIDs *[]uuid.UUID) (*entity.Work, error)
 	DeleteWork(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
 
@@ -23,13 +23,15 @@ type workUseCase struct {
 	workRepo  repository.WorkRepository
 	tagRepo   repository.TagRepository
 	assetRepo repository.AssetRepository
+	userRepo  repository.UserRepository
 }
 
-func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository) IWorkUseCase {
+func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository) IWorkUseCase {
 	return &workUseCase{
 		workRepo:  workRepo,
 		tagRepo:   tagRepo,
 		assetRepo: assetRepo,
+		userRepo:  userRepo,
 	}
 }
 
@@ -85,7 +87,7 @@ func (uc *workUseCase) GetByUserID(ctx context.Context, userID uuid.UUID, authen
 	return works, nil
 }
 
-func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID) (*entity.Work, error) {
+func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error) {
 	if title == "" {
 		return nil, domainerrors.ErrInvalidTitle
 	}
@@ -115,6 +117,21 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 		return nil, fmt.Errorf("failed to find tags by ids: %w", err)
 	}
 
+	var collaborators []*entity.User
+	if len(collaboratorIDs) > 0 {
+		for _, collaboratorID := range collaboratorIDs {
+			// オーナー自身を共同制作者として追加できないようにする
+			if collaboratorID == userID {
+				return nil, domainerrors.ErrOwnerCannotBeCollaborator
+			}
+			user, err := uc.userRepo.GetByID(ctx, collaboratorID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get collaborator by ID %s: %w", collaboratorID.String(), err)
+			}
+			collaborators = append(collaborators, user)
+		}
+	}
+
 	assets := make([]*entity.Asset, len(assetIDs))
 	for i, assetID := range assetIDs {
 		assets[i] = &entity.Asset{
@@ -128,6 +145,7 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 	}
 
 	work := entity.NewWork(title, description, userID, visibility, thumbnailAssetID, assets, urlPointers, tagIDs, tags)
+	work.Collaborators = collaborators
 
 	createdWork, err := uc.workRepo.Create(ctx, work)
 	if err != nil {
@@ -136,7 +154,7 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 	return createdWork, nil
 }
 
-func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID) (*entity.Work, error) {
+func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID, collaboratorIDs *[]uuid.UUID) (*entity.Work, error) {
 	work, err := uc.workRepo.GetByID(ctx, workID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get work by ID %s: %w", workID.String(), err)
@@ -188,6 +206,23 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 		}
 		work.Tags = tags
 		work.TagIDs = *tagIDs
+	}
+	if collaboratorIDs != nil {
+		var collaborators []*entity.User
+		if len(*collaboratorIDs) > 0 {
+			for _, collaboratorID := range *collaboratorIDs {
+				// オーナー自身を共同制作者として追加できないようにする
+				if collaboratorID == userID {
+					return nil, domainerrors.ErrOwnerCannotBeCollaborator
+				}
+				user, err := uc.userRepo.GetByID(ctx, collaboratorID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get collaborator by ID %s: %w", collaboratorID.String(), err)
+				}
+				collaborators = append(collaborators, user)
+			}
+		}
+		work.Collaborators = collaborators
 	}
 
 	updatedWork, err := uc.workRepo.Update(ctx, work)

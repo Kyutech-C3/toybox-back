@@ -43,7 +43,7 @@ func InitializeApp() (*App, func(), error) {
 	tagRepository := tag.NewTagRepository(db)
 	client := ProvideS3Client()
 	assetRepository := asset.NewAssetRepository(db, client)
-	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository, assetRepository)
+	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository, assetRepository, userRepository)
 	workController := controller.NewWorkController(iWorkUseCase)
 	commentRepository := comment.NewCommentRepository(db)
 	iCommentUsecase := ProvideCommentUseCase(commentRepository, workRepository)
@@ -111,8 +111,8 @@ func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します
-func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository) usecase.IWorkUseCase {
-	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo)
+func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository) usecase.IWorkUseCase {
+	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo, userRepo)
 }
 
 // ProvideCommentUseCase はCommentUseCaseを提供します

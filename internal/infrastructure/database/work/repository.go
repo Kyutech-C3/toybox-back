@@ -58,6 +58,7 @@ func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs [
 		Relation("Assets").
 		Relation("URLs").
 		Relation("Tags").
+		Relation("Collaborators").
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -111,6 +112,7 @@ func (r *WorkRepository) GetAllPublic(ctx context.Context, limit, offset int, ta
 		Relation("Assets").
 		Relation("URLs").
 		Relation("Tags").
+		Relation("Collaborators").
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -137,6 +139,7 @@ func (r *WorkRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Wor
 		Relation("Assets").
 		Relation("Tags").
 		Relation("URLs").
+		Relation("Collaborators").
 		Where("id = ?", id).
 		Scan(ctx)
 	if err != nil {
@@ -161,6 +164,7 @@ func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, publ
 			Relation("Assets").
 			Relation("URLs").
 			Relation("Tags").
+			Relation("Collaborators").
 			Scan(ctx)
 		if err != nil {
 			return nil, domainerrors.ErrFailedToGetWorksByUserID
@@ -175,6 +179,7 @@ func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, publ
 			Relation("Assets").
 			Relation("URLs").
 			Relation("Tags").
+			Relation("Collaborators").
 			Scan(ctx)
 		if err != nil {
 			return nil, domainerrors.ErrFailedToGetWorksByUserID
@@ -264,6 +269,20 @@ func (r *WorkRepository) Create(ctx context.Context, work *entity.Work) (*entity
 		}
 	}
 
+	if len(dtoWork.Collaborators) > 0 {
+		collaborators := make([]*dto.Collaborator, len(dtoWork.Collaborators))
+		for i, collaborator := range dtoWork.Collaborators {
+			collaborators[i] = &dto.Collaborator{
+				WorkID: dtoWork.ID,
+				UserID: collaborator.ID,
+			}
+		}
+		_, err = tx.NewInsert().Model(&collaborators).Exec(ctx)
+		if err != nil {
+			return nil, domainerrors.ErrFailedToCreateWork
+		}
+	}
+
 	err = tx.Commit()
 	if err != nil {
 		return nil, domainerrors.ErrFailedToCommitTransaction
@@ -305,6 +324,10 @@ func (r *WorkRepository) Update(ctx context.Context, work *entity.Work) (*entity
 	if err != nil {
 		return nil, domainerrors.ErrFailedToUpdateWork
 	}
+	_, err = tx.NewDelete().Model(&dto.Collaborator{}).Where("work_id = ?", work.ID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
 
 	thumbnail := &dto.Thumbnail{
 		WorkID:  dtoWork.ID,
@@ -335,6 +358,21 @@ func (r *WorkRepository) Update(ctx context.Context, work *entity.Work) (*entity
 			return nil, domainerrors.ErrFailedToUpdateWork
 		}
 	}
+
+	if len(dtoWork.Collaborators) > 0 {
+		collaborators := make([]*dto.Collaborator, len(dtoWork.Collaborators))
+		for i, collaborator := range dtoWork.Collaborators {
+			collaborators[i] = &dto.Collaborator{
+				WorkID: dtoWork.ID,
+				UserID: collaborator.ID,
+			}
+		}
+		_, err = tx.NewInsert().Model(&collaborators).Exec(ctx)
+		if err != nil {
+			return nil, domainerrors.ErrFailedToUpdateWork
+		}
+	}
+
 	if len(dtoWork.Assets) > 0 {
 		for _, asset := range dtoWork.Assets {
 			_, err = tx.NewUpdate().Model(asset).Set("work_id = ?", dtoWork.ID).Where("id = ?", asset.ID).Exec(ctx)
@@ -391,6 +429,11 @@ func (r *WorkRepository) Delete(ctx context.Context, id uuid.UUID, userID uuid.U
 	}
 
 	_, err = tx.NewDelete().Model(&dto.URLInfo{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Collaborator{}).Where("work_id = ?", id).Exec(ctx)
 	if err != nil {
 		return domainerrors.ErrFailedToDeleteWork
 	}

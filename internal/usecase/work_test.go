@@ -261,12 +261,13 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
 
 			got, total, limit, page, err := uc.GetAll(context.Background(), tt.limit, tt.page, tt.userID, tt.tagIDs)
 
@@ -338,11 +339,12 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			tt.setupWorkMock(mockWorkRepo, tt.workID)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
 
 			got, err := uc.GetByID(context.Background(), tt.workID)
 
@@ -482,10 +484,11 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			tt.setupMock(mockWorkRepo, tt.userID)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
 
 			got, err := uc.GetByUserID(context.Background(), tt.userID, tt.authenticatedUserID)
 
@@ -697,13 +700,14 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo, tt.tagIDs)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo)
-			got, err := uc.CreateWork(context.Background(), tt.title, tt.description, tt.visibility, tt.thumbnailAssetID, tt.assetIDs, tt.urls, tt.userID, tt.tagIDs)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			got, err := uc.CreateWork(context.Background(), tt.title, tt.description, tt.visibility, tt.thumbnailAssetID, tt.assetIDs, tt.urls, tt.userID, tt.tagIDs, []uuid.UUID{})
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -839,13 +843,14 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo)
-			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, nil, nil, nil, nil)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, nil, nil, nil, nil, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -955,11 +960,12 @@ func TestWorkUseCase_DeleteWork(t *testing.T) {
 			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
 			mockTagRepo := mock.NewMockTagRepository(ctrl) // Not used, but included for constructor consistency
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
 			err := uc.DeleteWork(context.Background(), tt.workID, tt.userID)
 
 			if tt.wantErr {
@@ -974,3 +980,260 @@ func TestWorkUseCase_DeleteWork(t *testing.T) {
 	}
 }
 
+
+func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
+	userID := uuid.New()
+	collaborator1ID := uuid.New()
+	collaborator2ID := uuid.New()
+	tagID := uuid.New()
+
+	tests := []struct {
+		name              string
+		collaboratorIDs   []uuid.UUID
+		setupWorkMock     func(*mock.MockWorkRepository)
+		setupTagMock      func(*mock.MockTagRepository)
+		setupAssetMock    func(*mock.MockAssetRepository)
+		setupUserMock     func(*mock.MockUserRepository)
+		wantErr           bool
+		wantErrMsg        error
+		wantCollaborators int
+	}{
+		{
+			name:            "正常系: 共同制作者を追加",
+			collaboratorIDs: []uuid.UUID{collaborator1ID, collaborator2ID},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+						assert.Equal(t, 2, len(work.Collaborators))
+						work.CreatedAt = time.Now()
+						work.UpdatedAt = time.Now()
+						return work, nil
+					}).
+					Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository) {
+				m.EXPECT().ExistAll(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return(true, nil).Times(1)
+				m.EXPECT().FindAllByIDs(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return([]*entity.Tag{{ID: tagID, Name: "Tag1"}}, nil).Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupUserMock: func(m *mock.MockUserRepository) {
+				m.EXPECT().GetByID(gomock.Any(), collaborator1ID).Return(&entity.User{ID: collaborator1ID, DisplayName: "Collaborator1"}, nil).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), collaborator2ID).Return(&entity.User{ID: collaborator2ID, DisplayName: "Collaborator2"}, nil).Times(1)
+			},
+			wantErr:           false,
+			wantCollaborators: 2,
+		},
+		{
+			name:            "異常系: オーナー自身を共同制作者に追加",
+			collaboratorIDs: []uuid.UUID{userID},
+			setupWorkMock:   func(m *mock.MockWorkRepository) {},
+			setupTagMock: func(m *mock.MockTagRepository) {
+				m.EXPECT().ExistAll(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return(true, nil).Times(1)
+				m.EXPECT().FindAllByIDs(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return([]*entity.Tag{{ID: tagID, Name: "Tag1"}}, nil).Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupUserMock:  func(m *mock.MockUserRepository) {},
+			wantErr:        true,
+			wantErrMsg:     domainerrors.ErrOwnerCannotBeCollaborator,
+		},
+		{
+			name:            "異常系: 存在しないユーザーを共同制作者に追加",
+			collaboratorIDs: []uuid.UUID{collaborator1ID},
+			setupWorkMock:   func(m *mock.MockWorkRepository) {},
+			setupTagMock: func(m *mock.MockTagRepository) {
+				m.EXPECT().ExistAll(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return(true, nil).Times(1)
+				m.EXPECT().FindAllByIDs(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return([]*entity.Tag{{ID: tagID, Name: "Tag1"}}, nil).Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupUserMock: func(m *mock.MockUserRepository) {
+				m.EXPECT().GetByID(gomock.Any(), collaborator1ID).Return(nil, errors.New("user not found")).Times(1)
+			},
+			wantErr: true,
+		},
+		{
+			name:            "正常系: 共同制作者なし（空配列）",
+			collaboratorIDs: []uuid.UUID{},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+						assert.Equal(t, 0, len(work.Collaborators))
+						work.CreatedAt = time.Now()
+						work.UpdatedAt = time.Now()
+						return work, nil
+					}).
+					Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository) {
+				m.EXPECT().ExistAll(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return(true, nil).Times(1)
+				m.EXPECT().FindAllByIDs(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return([]*entity.Tag{{ID: tagID, Name: "Tag1"}}, nil).Times(1)
+			},
+			setupAssetMock:    func(m *mock.MockAssetRepository) {},
+			setupUserMock:     func(m *mock.MockUserRepository) {},
+			wantErr:           false,
+			wantCollaborators: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
+
+			tt.setupWorkMock(mockWorkRepo)
+			tt.setupTagMock(mockTagRepo)
+			tt.setupAssetMock(mockAssetRepo)
+			tt.setupUserMock(mockUserRepo)
+
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			got, err := uc.CreateWork(context.Background(), "Title", "Description", "public", uuid.New(), []uuid.UUID{uuid.New()}, []string{"https://example.com"}, userID, []uuid.UUID{tagID}, tt.collaboratorIDs)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrMsg != nil {
+					assert.True(t, errors.Is(err, tt.wantErrMsg))
+				}
+				assert.Nil(t, got)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, got)
+				assert.Equal(t, tt.wantCollaborators, len(got.Collaborators))
+			}
+		})
+	}
+}
+
+func TestWorkUseCase_UpdateWork_WithCollaborators(t *testing.T) {
+	workID := uuid.New()
+	userID := uuid.New()
+	collaborator1ID := uuid.New()
+	collaborator2ID := uuid.New()
+
+	initialWork := &entity.Work{
+		ID:            workID,
+		Title:         "Original Title",
+		Description:   "Original Description",
+		UserID:        userID,
+		Visibility:    "private",
+		Collaborators: []*entity.User{},
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+
+	tests := []struct {
+		name              string
+		collaboratorIDs   *[]uuid.UUID
+		setupWorkMock     func(*mock.MockWorkRepository)
+		setupTagMock      func(*mock.MockTagRepository)
+		setupAssetMock    func(*mock.MockAssetRepository)
+		setupUserMock     func(*mock.MockUserRepository)
+		wantErr           bool
+		wantErrMsg        error
+	}{
+		{
+			name:            "正常系: 共同制作者を追加",
+			collaboratorIDs: &[]uuid.UUID{collaborator1ID, collaborator2ID},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(initialWork, nil).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+					assert.Equal(t, 2, len(work.Collaborators))
+					return work, nil
+				}).Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupUserMock: func(m *mock.MockUserRepository) {
+				m.EXPECT().GetByID(gomock.Any(), collaborator1ID).Return(&entity.User{ID: collaborator1ID, DisplayName: "Collaborator1"}, nil).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), collaborator2ID).Return(&entity.User{ID: collaborator2ID, DisplayName: "Collaborator2"}, nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:            "異常系: オーナー自身を共同制作者に追加",
+			collaboratorIDs: &[]uuid.UUID{userID},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(initialWork, nil).Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupUserMock:  func(m *mock.MockUserRepository) {},
+			wantErr:        true,
+			wantErrMsg:     domainerrors.ErrOwnerCannotBeCollaborator,
+		},
+		{
+			name:            "正常系: collaboratorIDs=nilで既存の共同制作者を維持",
+			collaboratorIDs: nil,
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				workWithCollaborators := &entity.Work{
+					ID:            workID,
+					Title:         "Original Title",
+					Description:   "Original Description",
+					UserID:        userID,
+					Visibility:    "private",
+					Collaborators: []*entity.User{{ID: collaborator1ID}},
+					CreatedAt:     time.Now(),
+					UpdatedAt:     time.Now(),
+				}
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(workWithCollaborators, nil).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+					return work, nil
+				}).Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupUserMock:  func(m *mock.MockUserRepository) {},
+			wantErr:        false,
+		},
+		{
+			name:            "正常系: 空配列で共同制作者をクリア",
+			collaboratorIDs: &[]uuid.UUID{},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(initialWork, nil).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+					assert.Equal(t, 0, len(work.Collaborators))
+					return work, nil
+				}).Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupUserMock:  func(m *mock.MockUserRepository) {},
+			wantErr:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
+
+			tt.setupWorkMock(mockWorkRepo)
+			tt.setupTagMock(mockTagRepo)
+			tt.setupAssetMock(mockAssetRepo)
+			tt.setupUserMock(mockUserRepo)
+
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			got, err := uc.UpdateWork(context.Background(), workID, userID, nil, nil, nil, nil, nil, nil, nil, tt.collaboratorIDs)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrMsg != nil {
+					assert.True(t, errors.Is(err, tt.wantErrMsg))
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, got)
+			}
+		})
+	}
+}

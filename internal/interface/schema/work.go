@@ -8,15 +8,16 @@ import (
 )
 
 type GetWorkOutput struct {
-	ID          uuid.UUID       `json:"id"`
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	UserID      uuid.UUID       `json:"user_id"`
-	Visibility  string          `json:"visibility"`
-	Assets      []AssetResponse `json:"assets"`
-	Tags        []TagResponse   `json:"tags"`
-	CreatedAt   string          `json:"created_at"`
-	UpdatedAt   string          `json:"updated_at"`
+	ID            uuid.UUID              `json:"id"`
+	Title         string                 `json:"title"`
+	Description   string                 `json:"description"`
+	UserID        uuid.UUID              `json:"user_id"`
+	Visibility    string                 `json:"visibility"`
+	Assets        []AssetResponse        `json:"assets"`
+	Tags          []TagResponse          `json:"tags"`
+	Collaborators []CollaboratorResponse `json:"collaborators"`
+	CreatedAt     string                 `json:"created_at"`
+	UpdatedAt     string                 `json:"updated_at"`
 }
 
 type CreateWorkInput struct {
@@ -27,6 +28,7 @@ type CreateWorkInput struct {
 	AssetIDs         []uuid.UUID `json:"asset_ids" validate:"required,dive,uuid"`
 	URLs             []string    `json:"urls" validate:"required,dive,url"`
 	TagIDs           []uuid.UUID `json:"tag_ids" validate:"required,dive,uuid"`
+	CollaboratorIDs  []uuid.UUID `json:"collaborator_ids,omitempty" validate:"omitempty,dive,uuid"`
 }
 
 type CreateWorkOutput struct {
@@ -47,6 +49,7 @@ type UpdateWorkInput struct {
 	AssetIDs         *[]uuid.UUID `json:"asset_ids,omitempty" validate:"omitempty,dive,uuid"`
 	URLs             *[]string    `json:"urls,omitempty" validate:"omitempty,dive,url"`
 	TagIDs           *[]uuid.UUID `json:"tag_ids,omitempty" validate:"omitempty,dive,uuid"`
+	CollaboratorIDs  *[]uuid.UUID `json:"collaborator_ids,omitempty" validate:"omitempty,dive,uuid"`
 }
 
 type GetWorksQuery struct {
@@ -78,20 +81,27 @@ type TagResponse struct {
 	Name string    `json:"name"`
 }
 
+type CollaboratorResponse struct {
+	ID          uuid.UUID `json:"id"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   string    `json:"avatar_url"`
+}
+
 func ToWorkResponse(work *entity.Work) GetWorkOutput {
 	if work == nil {
 		return GetWorkOutput{}
 	}
 	return GetWorkOutput{
-		ID:          work.ID,
-		Title:       work.Title,
-		Description: work.Description,
-		UserID:      work.UserID,
-		Visibility:  work.Visibility,
-		Assets:      ToAssetResponses(work.Assets),
-		Tags:        ToTagResponses(work.Tags),
-		CreatedAt:   work.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   work.UpdatedAt.Format(time.RFC3339),
+		ID:            work.ID,
+		Title:         work.Title,
+		Description:   work.Description,
+		UserID:        work.UserID,
+		Visibility:    work.Visibility,
+		Assets:        ToAssetResponses(work.Assets),
+		Tags:          ToTagResponses(work.Tags),
+		Collaborators: ToCollaboratorResponses(work.Collaborators),
+		CreatedAt:     work.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:     work.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
@@ -158,6 +168,30 @@ func ToTagResponses(tags []*entity.Tag) []TagResponse {
 	res := make([]TagResponse, 0, len(tags))
 	for _, tag := range tags {
 		res = append(res, ToTagResponse(tag))
+	}
+	return res
+}
+
+func ToCollaboratorResponse(user *entity.User) CollaboratorResponse {
+	if user == nil {
+		return CollaboratorResponse{}
+	}
+
+	return CollaboratorResponse{
+		ID:          user.ID,
+		DisplayName: user.DisplayName,
+		AvatarURL:   user.AvatarURL,
+	}
+}
+
+func ToCollaboratorResponses(users []*entity.User) []CollaboratorResponse {
+	if len(users) == 0 {
+		return []CollaboratorResponse{}
+	}
+
+	res := make([]CollaboratorResponse, 0, len(users))
+	for _, user := range users {
+		res = append(res, ToCollaboratorResponse(user))
 	}
 	return res
 }

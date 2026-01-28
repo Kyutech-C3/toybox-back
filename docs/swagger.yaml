@@ -23,6 +23,15 @@ definitions:
       work_id:
         type: string
     type: object
+  github_com_simesaba80_toybox-back_internal_interface_schema.CollaboratorResponse:
+    properties:
+      avatar_url:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: string
+    type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.CommentResponse:
     properties:
       content:
@@ -69,6 +78,10 @@ definitions:
   github_com_simesaba80_toybox-back_internal_interface_schema.CreateWorkInput:
     properties:
       asset_ids:
+        items:
+          type: string
+        type: array
+      collaborator_ids:
         items:
           type: string
         type: array
@@ -158,6 +171,10 @@ definitions:
         items:
           $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.AssetResponse'
         type: array
+      collaborators:
+        items:
+          $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.CollaboratorResponse'
+        type: array
       created_at:
         type: string
       description:
@@ -211,6 +228,10 @@ definitions:
   github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput:
     properties:
       asset_ids:
+        items:
+          type: string
+        type: array
+      collaborator_ids:
         items:
           type: string
         type: array
