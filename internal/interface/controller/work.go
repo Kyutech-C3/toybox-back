@@ -308,6 +308,8 @@ func handleWorkError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "作品の取得に失敗しました")
 	case errors.Is(err, domainerrors.ErrWorkNotFound):
 		return echo.NewHTTPError(http.StatusNotFound, "作品が見つかりませんでした")
+	case errors.Is(err, domainerrors.ErrUserNotFound):
+		return echo.NewHTTPError(http.StatusNotFound, "ユーザーが見つかりませんでした")
 	case errors.Is(err, domainerrors.ErrFailedToBeginTransaction):
 		return echo.NewHTTPError(http.StatusInternalServerError, "トランザクションの開始に失敗しました")
 	case errors.Is(err, domainerrors.ErrFailedToCommitTransaction):
