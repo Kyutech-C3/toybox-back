@@ -11,7 +11,6 @@ import (
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/usecase"
 	"github.com/simesaba80/toybox-back/internal/usecase/mock"
-	"github.com/simesaba80/toybox-back/internal/util"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -59,8 +58,8 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "正常系: カスタムページネーション(limit=10, page=1)",
-			limit:  util.IntPtr(10),
-			page:   util.IntPtr(1),
+			limit:  IntPtr(10),
+			page:   IntPtr(1),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
@@ -82,8 +81,8 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "正常系: カスタムページネーション(limit=20, page=2)",
-			limit:  util.IntPtr(20),
-			page:   util.IntPtr(2),
+			limit:  IntPtr(20),
+			page:   IntPtr(2),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
@@ -125,8 +124,8 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "エッジケース: limit=0, page=0",
-			limit:  util.IntPtr(0),
-			page:   util.IntPtr(0),
+			limit:  IntPtr(0),
+			page:   IntPtr(0),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
@@ -145,8 +144,8 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "エッジケース: 負の値(limit=-1, page=-1)",
-			limit:  util.IntPtr(-1),
-			page:   util.IntPtr(-1),
+			limit:  IntPtr(-1),
+			page:   IntPtr(-1),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
@@ -165,7 +164,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "エッジケース: limitのみ指定、pageはnil",
-			limit:  util.IntPtr(5),
+			limit:  IntPtr(5),
 			page:   nil,
 			userID: uuid.Nil,
 			tagIDs: nil,
@@ -189,7 +188,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		{
 			name:   "エッジケース: pageのみ指定、limitはnil",
 			limit:  nil,
-			page:   util.IntPtr(3),
+			page:   IntPtr(3),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
@@ -232,7 +231,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		{
 			name:   "正常系: 認証済みユーザーは限定作品含め取得",
 			limit:  nil,
-			page:   util.IntPtr(2),
+			page:   IntPtr(2),
 			userID: uuid.New(),
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
@@ -982,5 +981,10 @@ func TestWorkUseCase_DeleteWork(t *testing.T) {
 			}
 		})
 	}
+}
+
+// IntPtr returns a pointer to the given int value.
+func IntPtr(i int) *int {
+	return &i
 }
 
