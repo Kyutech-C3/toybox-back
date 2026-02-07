@@ -79,5 +79,9 @@ var (
 
 // タグ関連のエラー定義
 var (
-	ErrTagNotFound = errors.New("tag not found")
+	ErrTagNotFound        = errors.New("tag not found")
+	ErrFailedToCreateTag  = errors.New("failed to create tag")
+	ErrFailedToGetAllTags = errors.New("failed to get all tags")
+	ErrTagAlreadyExists   = errors.New("tag already exists")
+	ErrInvalidTagName     = errors.New("invalid tag name")
 )

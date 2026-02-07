@@ -42,10 +42,6 @@ func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid
 	if page != nil {
 		actualPage = *page
 	}
-	fmt.Println("actualLimit", actualLimit)
-	fmt.Println("actualPage", actualPage)
-	fmt.Println("userID", userID)
-
 	offset := (actualPage - 1) * actualLimit
 	if userID == uuid.Nil {
 		works, total, err := uc.workRepo.GetAllPublic(ctx, actualLimit, offset, tagIDs)

@@ -25,10 +25,18 @@ import (
 
 func TestWorkController_GetAllWorks(t *testing.T) {
 	userID := uuid.New()
+	author := entity.NewUser(
+		"testuser",
+		"test@example.com",
+		"Test Author",
+		"discord123",
+		"http://example.com/avatar.png",
+	)
 	mockWork := &entity.Work{
 		ID:        uuid.New(),
 		Title:     "Test Work",
-		UserID:    uuid.New(),
+		UserID:    author.ID,
+		User:      author,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -124,10 +132,18 @@ func TestWorkController_GetAllWorks(t *testing.T) {
 
 func TestWorkController_GetWorkByID(t *testing.T) {
 	workID := uuid.New()
+	author := entity.NewUser(
+		"testuser",
+		"test@example.com",
+		"Test Author",
+		"discord123",
+		"http://example.com/avatar.png",
+	)
 	mockWork := &entity.Work{
 		ID:        workID,
 		Title:     "Test Work",
-		UserID:    uuid.New(),
+		UserID:    author.ID,
+		User:      author,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -199,10 +215,20 @@ func TestWorkController_GetWorkByID(t *testing.T) {
 func TestWorkController_GetWorksByUserID(t *testing.T) {
 	targetUserID := uuid.New()
 	authenticatedUserID := uuid.New()
+	author := entity.NewUser(
+		"testuser",
+		"test@example.com",
+		"Test Author",
+		"discord123",
+		"http://example.com/avatar.png",
+	)
+	author.ID = targetUserID
+
 	mockWork1 := &entity.Work{
 		ID:        uuid.New(),
 		Title:     "Public Work",
 		UserID:    targetUserID,
+		User:      author,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -210,6 +236,7 @@ func TestWorkController_GetWorksByUserID(t *testing.T) {
 		ID:        uuid.New(),
 		Title:     "Private Work",
 		UserID:    targetUserID,
+		User:      author,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

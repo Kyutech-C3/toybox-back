@@ -18,11 +18,13 @@ type Work struct {
 	Description      string           `bun:"description,notnull"`
 	Visibility       types.Visibility `bun:"visibility"`
 	ThumbnailAssetID uuid.UUID        `bun:"-"`
+	Thumbnail        *Thumbnail       `bun:"rel:has-one,join:id=work_id"`
 	Assets           []*Asset         `bun:"rel:has-many,join:id=work_id"`
 	URLs             []*URLInfo       `bun:"rel:has-many,join:id=work_id"`
 	Tags             []*Tag           `bun:"m2m:tagging,join:Work=Tag"`
 	TagIDs           []uuid.UUID      `bun:"-"`
 	UserID           uuid.UUID        `bun:"user_id,notnull"`
+	User             *User            `bun:"rel:belongs-to,join:user_id=id"`
 	CreatedAt        time.Time        `bun:"created_at,notnull"`
 	UpdatedAt        time.Time        `bun:"updated_at,notnull"`
 }
@@ -45,18 +47,35 @@ func (w *Work) ToWorkEntity() *entity.Work {
 		tagIDs[i] = tag.ID
 	}
 
+	var userEntity *entity.User
+	if w.User != nil {
+		userEntity = w.User.ToUserEntity()
+	}
+
+	var thumbnailAssetID uuid.UUID
+	var thumbnailURL string
+	if w.Thumbnail != nil {
+		thumbnailAssetID = w.Thumbnail.AssetID
+		if w.Thumbnail.Asset != nil {
+			thumbnailURL = w.Thumbnail.Asset.URL
+		}
+	}
+
 	return &entity.Work{
-		ID:          w.ID,
-		Title:       w.Title,
-		Description: w.Description,
-		UserID:      w.UserID,
-		Visibility:  string(w.Visibility),
-		Assets:      assets,
-		URLs:        urls,
-		TagIDs:      tagIDs,
-		Tags:        entityTags,
-		CreatedAt:   w.CreatedAt,
-		UpdatedAt:   w.UpdatedAt,
+		ID:               w.ID,
+		Title:            w.Title,
+		Description:      w.Description,
+		UserID:           w.UserID,
+		User:             userEntity,
+		Visibility:       string(w.Visibility),
+		ThumbnailAssetID: thumbnailAssetID,
+		ThumbnailURL:     thumbnailURL,
+		Assets:           assets,
+		URLs:             urls,
+		TagIDs:           tagIDs,
+		Tags:             entityTags,
+		CreatedAt:        w.CreatedAt,
+		UpdatedAt:        w.UpdatedAt,
 	}
 }
 
@@ -82,12 +101,16 @@ func ToWorkDTO(entity *entity.Work) *Work {
 		Description:      entity.Description,
 		UserID:           entity.UserID,
 		ThumbnailAssetID: entity.ThumbnailAssetID,
-		Visibility:       types.Visibility(entity.Visibility),
-		Assets:           assets,
-		URLs:             urls,
-		Tags:             tags,
-		TagIDs:           entity.TagIDs,
-		CreatedAt:        entity.CreatedAt,
-		UpdatedAt:        entity.UpdatedAt,
+		Thumbnail: &Thumbnail{
+			WorkID:  entity.ID,
+			AssetID: entity.ThumbnailAssetID,
+		},
+		Visibility: types.Visibility(entity.Visibility),
+		Assets:     assets,
+		URLs:       urls,
+		Tags:       tags,
+		TagIDs:     entity.TagIDs,
+		CreatedAt:  entity.CreatedAt,
+		UpdatedAt:  entity.UpdatedAt,
 	}
 }

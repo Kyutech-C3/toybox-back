@@ -7,6 +7,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
+	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/dto"
 )
 
@@ -44,6 +45,35 @@ func (r *TagRepository) FindAllByIDs(ctx context.Context, ids []uuid.UUID) ([]*e
 		Scan(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	entityTags := make([]*entity.Tag, len(dtoTags))
+	for i, dtoTag := range dtoTags {
+		entityTags[i] = dtoTag.ToTagEntity()
+	}
+
+	return entityTags, nil
+}
+
+func (r *TagRepository) Create(ctx context.Context, tag *entity.Tag) (*entity.Tag, error) {
+	dtoTag := dto.ToTagDTO(tag)
+	_, err := r.db.NewInsert().
+		Model(dtoTag).
+		Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToCreateTag
+	}
+	return dtoTag.ToTagEntity(), nil
+}
+
+func (r *TagRepository) FindAll(ctx context.Context) ([]*entity.Tag, error) {
+	var dtoTags []*dto.Tag
+	err := r.db.NewSelect().
+		Model(&dtoTags).
+		Order("name ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToGetAllTags
 	}
 
 	entityTags := make([]*entity.Tag, len(dtoTags))

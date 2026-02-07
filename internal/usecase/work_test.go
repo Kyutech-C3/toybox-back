@@ -17,6 +17,7 @@ import (
 )
 
 func TestWorkUseCase_GetAll(t *testing.T) {
+	author := entity.NewUser("test", "test@test.com", "test", "test", "test")
 	tests := []struct {
 		name           string
 		limit          *int
@@ -40,8 +41,8 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: uuid.New()},
-					{ID: uuid.New(), Title: "Work2", Description: "Desc2", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: author.ID, User: author},
+					{ID: uuid.New(), Title: "Work2", Description: "Desc2", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(20), gomock.Eq(0), gomock.Nil()).
@@ -64,7 +65,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(10), gomock.Eq(0), gomock.Nil()).
@@ -87,7 +88,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work3", Description: "Desc3", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work3", Description: "Desc3", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(20), gomock.Eq(20), gomock.Nil()).
@@ -170,7 +171,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(5), gomock.Eq(0), gomock.Nil()).
@@ -193,7 +194,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(20), gomock.Eq(40), gomock.Nil()).
@@ -236,7 +237,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "PrivateWork", Description: "Desc", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "PrivateWork", Description: "Desc", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAll(gomock.Any(), gomock.Eq(20), gomock.Eq(20), gomock.Nil()).
@@ -298,11 +299,13 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 			name:   "正常系: 作品取得成功",
 			workID: uuid.New(),
 			setupWorkMock: func(m *mock.MockWorkRepository, workID uuid.UUID) {
+				author := entity.NewUser("test", "test@test.com", "test", "test", "test")
 				expectedWork := &entity.Work{
 					ID:          workID,
 					Title:       "Test Work",
 					Description: "Test Description",
-					UserID:      uuid.New(),
+					UserID:      author.ID,
+					User:        author,
 					CreatedAt:   time.Now(),
 					UpdatedAt:   time.Now(),
 				}
@@ -353,6 +356,7 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, tt.workID, got.ID)
+				assert.NotNil(t, got.User)
 			}
 		})
 	}
@@ -361,6 +365,8 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 func TestWorkUseCase_GetByUserID(t *testing.T) {
 	targetUserID := uuid.New()
 	authenticatedUserID := uuid.New()
+	author := entity.NewUser("test", "test@test.com", "test", "test", "test")
+	author.ID = targetUserID
 
 	tests := []struct {
 		name                string
@@ -382,6 +388,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 						Title:       "Public Work",
 						Description: "Public Description",
 						UserID:      userID,
+						User:        author,
 						Visibility:  "public",
 						CreatedAt:   time.Now(),
 						UpdatedAt:   time.Now(),
@@ -391,6 +398,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 						Title:       "Private Work",
 						Description: "Private Description",
 						UserID:      userID,
+						User:        author,
 						Visibility:  "private",
 						CreatedAt:   time.Now(),
 						UpdatedAt:   time.Now(),
@@ -416,6 +424,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 						Title:       "Public Work",
 						Description: "Public Description",
 						UserID:      userID,
+						User:        author,
 						Visibility:  "public",
 						CreatedAt:   time.Now(),
 						UpdatedAt:   time.Now(),
@@ -499,6 +508,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 				if tt.wantCount > 0 {
 					for _, work := range got {
 						assert.Equal(t, tt.userID, work.UserID)
+						assert.NotNil(t, work.User)
 					}
 				}
 			}

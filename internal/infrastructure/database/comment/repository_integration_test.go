@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/comment"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/database/dto"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/testutil"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/work"
 	"github.com/stretchr/testify/require"
@@ -110,19 +111,88 @@ func insertTestWork(t *testing.T, db *bun.DB) *entity.Work {
 	t.Helper()
 
 	ctx := context.Background()
+	user := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test-tag")
+	asset := insertTestAsset(t, db, user.ID)
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
+
 	workRepo := work.NewWorkRepository(db)
 	testWork := &entity.Work{
 		ID:               uuid.New(),
 		Title:            "create-title",
 		Description:      "create-description",
-		UserID:           uuid.New(),
+		UserID:           user.ID,
 		Visibility:       "public",
-		ThumbnailAssetID: uuid.Nil,
-		Assets:           []*entity.Asset{},
+		ThumbnailAssetID: thumbnailAsset.ID,
+		Assets:           []*entity.Asset{asset},
+		TagIDs:           []uuid.UUID{tag.ID},
+		Tags:             []*entity.Tag{tag},
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
 	created, err := workRepo.Create(ctx, testWork)
 	require.NoError(t, err)
 	return created
+}
+
+func insertTestUser(t *testing.T, db *bun.DB) *entity.User {
+	t.Helper()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	userID := uuid.New()
+	shortID := userID.String()[:8]
+	user := &entity.User{
+		ID:            userID,
+		Name:          "user-" + shortID,
+		Email:         "user-" + shortID + "@example.com",
+		DisplayName:   "User " + shortID,
+		DiscordUserID: "discord-" + shortID,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+
+	dtoUser := dto.ToUserDTO(user)
+	_, err := db.NewInsert().Model(dtoUser).Exec(context.Background())
+	require.NoError(t, err)
+
+	return user
+}
+
+func insertTestTag(t *testing.T, db *bun.DB, name string) *entity.Tag {
+	t.Helper()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	tag := &entity.Tag{
+		ID:        uuid.New(),
+		Name:      name,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	dtoTag := dto.ToTagDTO(tag)
+	_, err := db.NewInsert().Model(dtoTag).Exec(context.Background())
+	require.NoError(t, err)
+
+	return tag
+}
+
+func insertTestAsset(t *testing.T, db *bun.DB, userID uuid.UUID) *entity.Asset {
+	t.Helper()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	asset := &entity.Asset{
+		ID:        uuid.New(),
+		AssetType: "image",
+		UserID:    userID,
+		Extension: "png",
+		URL:       "https://example.com/test.png",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	dtoAsset := dto.ToAssetDTO(asset)
+	_, err := db.NewInsert().Model(dtoAsset).Exec(context.Background())
+	require.NoError(t, err)
+
+	return asset
 }

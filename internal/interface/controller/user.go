@@ -70,6 +70,31 @@ func (uc *UserController) GetUserByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, schema.ToUserResponse(user))
 }
 
+// GetIconAndURLByUserID godoc
+// @Summary Get icon and URL by user ID
+// @Description Get icon and URL by user ID
+// @Tags users
+// @Produce json
+// @Success 200 {object} schema.GetIconAndURLResponse
+// @Failure 400 {object} echo.HTTPError
+// @Failure 404 {object} echo.HTTPError
+// @Failure 500 {object} echo.HTTPError
+// @Router /auth/users/me [get]
+// @Security BearerAuth
+func (uc *UserController) GetIconAndURLByUserID(c echo.Context) error {
+	token := c.Get("user").(*jwt.Token)
+	claims := token.Claims.(*schema.JWTCustomClaims)
+	userID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
+	}
+	user, err := uc.userusecase.GetByUserID(c.Request().Context(), userID)
+	if err != nil {
+		return handleUserError(err)
+	}
+	return c.JSON(http.StatusOK, schema.ToIconAndURLResponse(user))
+}
+
 // UpdateUser godoc
 // @Summary Update a user
 // @Description Update a user

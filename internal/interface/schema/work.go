@@ -7,16 +7,23 @@ import (
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
 )
 
+type UserInWorkResponse struct {
+	ID          uuid.UUID `json:"id"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   string    `json:"avatar_url"`
+}
+
 type GetWorkOutput struct {
-	ID          uuid.UUID       `json:"id"`
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	UserID      uuid.UUID       `json:"user_id"`
-	Visibility  string          `json:"visibility"`
-	Assets      []AssetResponse `json:"assets"`
-	Tags        []TagResponse   `json:"tags"`
-	CreatedAt   string          `json:"created_at"`
-	UpdatedAt   string          `json:"updated_at"`
+	ID           uuid.UUID           `json:"id"`
+	Title        string              `json:"title"`
+	Description  string              `json:"description"`
+	User         *UserInWorkResponse `json:"user"`
+	Visibility   string              `json:"visibility"`
+	ThumbnailURL string              `json:"thumbnail_url"`
+	Assets       []AssetResponse     `json:"assets"`
+	Tags         []TagResponse       `json:"tags"`
+	CreatedAt    string              `json:"created_at"`
+	UpdatedAt    string              `json:"updated_at"`
 }
 
 type CreateWorkInput struct {
@@ -82,16 +89,27 @@ func ToWorkResponse(work *entity.Work) GetWorkOutput {
 	if work == nil {
 		return GetWorkOutput{}
 	}
+
+	var user *UserInWorkResponse
+	if work.User != nil {
+		user = &UserInWorkResponse{
+			ID:          work.User.ID,
+			DisplayName: work.User.DisplayName,
+			AvatarURL:   work.User.AvatarURL,
+		}
+	}
+
 	return GetWorkOutput{
-		ID:          work.ID,
-		Title:       work.Title,
-		Description: work.Description,
-		UserID:      work.UserID,
-		Visibility:  work.Visibility,
-		Assets:      ToAssetResponses(work.Assets),
-		Tags:        ToTagResponses(work.Tags),
-		CreatedAt:   work.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   work.UpdatedAt.Format(time.RFC3339),
+		ID:           work.ID,
+		Title:        work.Title,
+		Description:  work.Description,
+		User:         user,
+		Visibility:   work.Visibility,
+		ThumbnailURL: work.ThumbnailURL,
+		Assets:       ToAssetResponses(work.Assets),
+		Tags:         ToTagResponses(work.Tags),
+		CreatedAt:    work.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    work.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
