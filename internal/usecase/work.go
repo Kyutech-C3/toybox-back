@@ -15,17 +15,21 @@ type IWorkUseCase interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, error)
 	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID) (*entity.Work, error)
+	UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID) (*entity.Work, error)
+	DeleteWork(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
 
 type workUseCase struct {
-	workRepo repository.WorkRepository
-	tagRepo  repository.TagRepository
+	workRepo  repository.WorkRepository
+	tagRepo   repository.TagRepository
+	assetRepo repository.AssetRepository
 }
 
-func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository) IWorkUseCase {
+func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository) IWorkUseCase {
 	return &workUseCase{
-		workRepo: workRepo,
-		tagRepo:  tagRepo,
+		workRepo:  workRepo,
+		tagRepo:   tagRepo,
+		assetRepo: assetRepo,
 	}
 }
 
@@ -126,4 +130,90 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 		return nil, fmt.Errorf("failed to create work: %w", err)
 	}
 	return createdWork, nil
+}
+
+func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID) (*entity.Work, error) {
+	work, err := uc.workRepo.GetByID(ctx, workID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get work by ID %s: %w", workID.String(), err)
+	}
+
+	if work.UserID != userID {
+		return nil, domainerrors.ErrWorkNotOwnedByUser
+	}
+
+	if title != nil {
+		work.Title = *title
+	}
+	if description != nil {
+		work.Description = *description
+	}
+	if visibility != nil {
+		work.Visibility = *visibility
+	}
+	if thumbnailAssetID != nil {
+		work.ThumbnailAssetID = *thumbnailAssetID
+	}
+	if assetIDs != nil {
+		assets := make([]*entity.Asset, len(*assetIDs))
+		for i, assetID := range *assetIDs {
+			assets[i] = &entity.Asset{
+				ID: assetID,
+			}
+		}
+		work.Assets = assets
+	}
+	if urls != nil {
+		urlPointers := make([]*string, len(*urls))
+		for i, url := range *urls {
+			urlPointers[i] = &url
+		}
+		work.URLs = urlPointers
+	}
+	if tagIDs != nil {
+		exists, err := uc.tagRepo.ExistAll(ctx, *tagIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check tag existence: %w", err)
+		}
+		if !exists {
+			return nil, domainerrors.ErrTagNotFound
+		}
+		tags, err := uc.tagRepo.FindAllByIDs(ctx, *tagIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find tags by ids: %w", err)
+		}
+		work.Tags = tags
+		work.TagIDs = *tagIDs
+	}
+
+	updatedWork, err := uc.workRepo.Update(ctx, work)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update work: %w", err)
+	}
+
+	return updatedWork, nil
+}
+
+func (uc *workUseCase) DeleteWork(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	work, err := uc.workRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get work by ID %s: %w", id.String(), err)
+	}
+
+	if work.UserID != userID {
+		return domainerrors.ErrWorkNotOwnedByUser
+	}
+
+	err = uc.workRepo.Delete(ctx, id, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete work %s: %w", id.String(), err)
+	}
+
+	for _, asset := range work.Assets {
+		if err := uc.assetRepo.DeleteFile(ctx, asset.URL); err != nil {
+			return fmt.Errorf("failed to delete asset file: %w", err)
+		}
+	}
+
+	return nil
 }

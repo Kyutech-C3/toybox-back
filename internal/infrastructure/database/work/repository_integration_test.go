@@ -599,6 +599,102 @@ func TestWorkRepository_ExistsByID(t *testing.T) {
 	require.False(t, exists)
 }
 
+func TestWorkRepository_Update(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+	tag1 := insertTestTag(t, db, "original-tag")
+	tag2 := insertTestTag(t, db, "updated-tag")
+
+	workEntity := newTestWork(user.ID, "original-title")
+	workEntity.Description = "original description"
+	workEntity.TagIDs = []uuid.UUID{tag1.ID}
+	workEntity.Tags = []*entity.Tag{tag1}
+	created, err := repo.Create(ctx, workEntity)
+	require.NoError(t, err)
+
+	created.Title = "updated-title"
+	created.Description = "updated description"
+	created.Visibility = "private"
+	created.TagIDs = []uuid.UUID{tag2.ID}
+	created.Tags = []*entity.Tag{tag2}
+
+	updated, err := repo.Update(ctx, created)
+	require.NoError(t, err)
+	require.Equal(t, "updated-title", updated.Title)
+	require.Equal(t, "updated description", updated.Description)
+	require.Equal(t, "private", updated.Visibility)
+	require.Equal(t, 1, len(updated.Tags))
+	require.Equal(t, tag2.Name, updated.Tags[0].Name)
+
+	fetched, err := repo.GetByID(ctx, created.ID)
+	require.NoError(t, err)
+	require.Equal(t, "updated-title", fetched.Title)
+	require.Equal(t, "updated description", fetched.Description)
+	require.Equal(t, "private", fetched.Visibility)
+}
+
+func TestWorkRepository_Delete(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test-tag")
+	asset := insertTestAsset(t, db, user.ID)
+
+	workEntity := newTestWork(user.ID, "to-be-deleted")
+	workEntity.TagIDs = []uuid.UUID{tag.ID}
+	workEntity.Tags = []*entity.Tag{tag}
+	workEntity.Assets = []*entity.Asset{asset}
+	created, err := repo.Create(ctx, workEntity)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, created.ID, user.ID)
+	require.NoError(t, err)
+
+	_, err = repo.GetByID(ctx, created.ID)
+	require.ErrorIs(t, err, domainerrors.ErrWorkNotFound)
+
+	exists, err := repo.ExistsById(ctx, created.ID)
+	require.NoError(t, err)
+	require.False(t, exists)
+}
+
+func TestWorkRepository_Delete_NotOwned(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user1 := insertTestUser(t, db)
+	user2 := insertTestUser(t, db)
+
+	workEntity := newTestWork(user1.ID, "user1-work")
+	created, err := repo.Create(ctx, workEntity)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, created.ID, user2.ID)
+	require.ErrorIs(t, err, domainerrors.ErrWorkNotOwnedByUser)
+
+	exists, err := repo.ExistsById(ctx, created.ID)
+	require.NoError(t, err)
+	require.True(t, exists)
+}
+
+func TestWorkRepository_Delete_NotFound(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+
+	nonExistentID := uuid.New()
+	err := repo.Delete(ctx, nonExistentID, user.ID)
+	require.ErrorIs(t, err, domainerrors.ErrWorkNotFound)
+}
+
 func insertTestUser(t *testing.T, db *bun.DB) *entity.User {
 	t.Helper()
 

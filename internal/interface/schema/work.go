@@ -46,6 +46,16 @@ type CreateWorkOutput struct {
 	UpdatedAt   string    `json:"updated_at"`
 }
 
+type UpdateWorkInput struct {
+	Title            *string      `json:"title,omitempty" validate:"omitempty,max=100"`
+	Description      *string      `json:"description,omitempty"`
+	Visibility       *string      `json:"visibility,omitempty" validate:"omitempty,oneof=public private draft"`
+	ThumbnailAssetID *uuid.UUID   `json:"thumbnail_asset_id,omitempty" validate:"omitempty,uuid"`
+	AssetIDs         *[]uuid.UUID `json:"asset_ids,omitempty" validate:"omitempty,dive,uuid"`
+	URLs             *[]string    `json:"urls,omitempty" validate:"omitempty,dive,url"`
+	TagIDs           *[]uuid.UUID `json:"tag_ids,omitempty" validate:"omitempty,dive,uuid"`
+}
+
 type GetWorksQuery struct {
 	Limit  *int   `query:"limit" validate:"omitempty,min=1,max=100"`
 	Page   *int   `query:"page" validate:"omitempty,min=1"`

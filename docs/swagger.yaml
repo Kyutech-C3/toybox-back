@@ -244,6 +244,34 @@ definitions:
     - display_name
     - email
     type: object
+  github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput:
+    properties:
+      asset_ids:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      tag_ids:
+        items:
+          type: string
+        type: array
+      thumbnail_asset_id:
+        type: string
+      title:
+        maxLength: 100
+        type: string
+      urls:
+        items:
+          type: string
+        type: array
+      visibility:
+        enum:
+        - public
+        - private
+        - draft
+        type: string
+    type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.UploadAssetResponse:
     properties:
       id:
@@ -597,6 +625,83 @@ paths:
       summary: Check if a user has favorited a work
       tags:
       - favorites
+  /auth/works/{work_id}:
+    delete:
+      description: Delete a work by ID (only owner can delete)
+      parameters:
+      - description: Work ID
+        in: path
+        name: work_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Delete a work
+      tags:
+      - works
+    patch:
+      consumes:
+      - application/json
+      description: Update a work by ID (only owner can update)
+      parameters:
+      - description: Work ID
+        in: path
+        name: work_id
+        required: true
+        type: string
+      - description: Work to update
+        in: body
+        name: work
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetWorkOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Update a work
+      tags:
+      - works
   /auth/works/asset:
     post:
       consumes:

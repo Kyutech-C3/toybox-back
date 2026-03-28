@@ -41,7 +41,9 @@ func InitializeApp() (*App, func(), error) {
 	userController := controller.NewUserController(iUserUseCase)
 	workRepository := work.NewWorkRepository(db)
 	tagRepository := tag.NewTagRepository(db)
-	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository)
+	client := ProvideS3Client()
+	assetRepository := asset.NewAssetRepository(db, client)
+	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository, assetRepository)
 	workController := controller.NewWorkController(iWorkUseCase)
 	commentRepository := comment.NewCommentRepository(db)
 	iCommentUsecase := ProvideCommentUseCase(commentRepository, workRepository)
@@ -49,8 +51,6 @@ func InitializeApp() (*App, func(), error) {
 	discordRepository := oauth.NewDiscordRepository()
 	tokenProvider := ProvideTokenProvider()
 	tokenRepository := token.NewTokenRepository(db)
-	client := ProvideS3Client()
-	assetRepository := asset.NewAssetRepository(db, client)
 	iAuthUsecase := ProvideAuthUseCase(discordRepository, userRepository, tokenProvider, tokenRepository, assetRepository)
 	authController := controller.NewAuthController(iAuthUsecase)
 	iAssetUseCase := ProvideAssetUseCase(assetRepository)
@@ -114,8 +114,8 @@ func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します
-func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository) usecase.IWorkUseCase {
-	return usecase.NewWorkUseCase(workRepo, tagRepo)
+func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository) usecase.IWorkUseCase {
+	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo)
 }
 
 // ProvideCommentUseCase はCommentUseCaseを提供します

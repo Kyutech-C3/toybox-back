@@ -14,4 +14,6 @@ type WorkRepository interface {
 	GetByUserID(ctx context.Context, userID uuid.UUID, public bool) ([]*entity.Work, error)
 	ExistsById(ctx context.Context, id uuid.UUID) (bool, error)
 	Create(ctx context.Context, work *entity.Work) (*entity.Work, error)
+	Update(ctx context.Context, work *entity.Work) (*entity.Work, error)
+	Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
