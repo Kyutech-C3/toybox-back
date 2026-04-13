@@ -6,11 +6,10 @@ FROM golang:1.24.6-alpine3.22 AS builder
 WORKDIR /app
 # go.mod と go.sum を app ディレクトリにコピー
 COPY go.mod go.sum ./
+# 指定されたモジュールをダウンロードする。※verifyはモジュールの整合性を確認するためのオプション
 RUN go mod download && go mod verify
 
 COPY . .
-# 指定されたモジュールをダウンロードする。
-RUN go mod download && go mod verify
 # ルートディレクトリの中身を app フォルダにコピーする
 # 実行ファイルの作成
 # -o はアウトプットの名前を指定。
