@@ -6,6 +6,9 @@ services:
       - .env
     volumes: !reset []
     dns: !reset []
+    depends_on: !reset
+      db:
+        condition: service_healthy
 
   localstack-s3:
     profiles:
