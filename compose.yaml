@@ -10,6 +10,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      localstack-s3:
+        condition: service_healthy
     volumes:
       - .:/app
     dns:
@@ -30,7 +32,7 @@ services:
     env_file:
       - .env
     ports:
-      - "5432:5432"
+      - "5431:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 1s
@@ -41,7 +43,7 @@ services:
 
   localstack-s3:
     container_name: localstack-s3
-    image: localstack/localstack:latest
+    image: localstack/localstack:4.13.1
     env_file:
       - .env
     environment:
@@ -58,6 +60,11 @@ services:
       - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - ./scripts/aws-init.sh:/etc/localstack/init/ready.d/aws-init.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   dbdata:

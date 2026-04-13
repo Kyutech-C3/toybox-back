@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	localstackImage = "localstack/localstack:latest"
+	localstackImage = "localstack/localstack:4.13.1"
 	s3Port          = "4566/tcp"
 
 	testS3Bucket = "toybox-test-bucket"
