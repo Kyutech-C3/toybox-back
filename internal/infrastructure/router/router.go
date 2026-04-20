@@ -108,6 +108,8 @@ func (r *Router) Setup() *echo.Echo {
 
 	// Work
 	e.POST("/works", r.WorkController.CreateWork)
+	e.PATCH("/works/:work_id", r.WorkController.UpdateWork)
+	e.DELETE("/works/:work_id", r.WorkController.DeleteWork)
 
 	// Asset
 	e.POST("/works/asset", r.AssetController.UploadAsset)

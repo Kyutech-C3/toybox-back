@@ -57,6 +57,20 @@ func (mr *MockIWorkUseCaseMockRecorder) CreateWork(ctx, title, description, visi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).CreateWork), ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs)
 }
 
+// DeleteWork mocks base method.
+func (m *MockIWorkUseCase) DeleteWork(ctx context.Context, id, userID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWork", ctx, id, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWork indicates an expected call of DeleteWork.
+func (mr *MockIWorkUseCaseMockRecorder) DeleteWork(ctx, id, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWork", reflect.TypeOf((*MockIWorkUseCase)(nil).DeleteWork), ctx, id, userID)
+}
+
 // GetAll mocks base method.
 func (m *MockIWorkUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, error) {
 	m.ctrl.T.Helper()
@@ -103,4 +117,19 @@ func (m *MockIWorkUseCase) GetByUserID(ctx context.Context, userID, authenticate
 func (mr *MockIWorkUseCaseMockRecorder) GetByUserID(ctx, userID, authenticatedUserID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserID", reflect.TypeOf((*MockIWorkUseCase)(nil).GetByUserID), ctx, userID, authenticatedUserID)
+}
+
+// UpdateWork mocks base method.
+func (m *MockIWorkUseCase) UpdateWork(ctx context.Context, workID, userID uuid.UUID, title, description, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID) (*entity.Work, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateWork", ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs)
+	ret0, _ := ret[0].(*entity.Work)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateWork indicates an expected call of UpdateWork.
+func (mr *MockIWorkUseCaseMockRecorder) UpdateWork(ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).UpdateWork), ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs)
 }

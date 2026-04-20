@@ -103,8 +103,8 @@ func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します
-func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository) usecase.IWorkUseCase {
-	return usecase.NewWorkUseCase(workRepo, tagRepo)
+func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository) usecase.IWorkUseCase {
+	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo)
 }
 
 // ProvideCommentUseCase はCommentUseCaseを提供します

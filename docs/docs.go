@@ -536,6 +536,126 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/works/{work_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a work by ID (only owner can delete)",
+                "tags": [
+                    "works"
+                ],
+                "summary": "Delete a work",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Work ID",
+                        "name": "work_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a work by ID (only owner can update)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "works"
+                ],
+                "summary": "Update a work",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Work ID",
+                        "name": "work_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Work to update",
+                        "name": "work",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetWorkOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/tags": {
             "get": {
                 "description": "Get all tags",
@@ -1296,6 +1416,47 @@ const docTemplate = `{
                 },
                 "twitter_id": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput": {
+            "type": "object",
+            "properties": {
+                "asset_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "tag_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "thumbnail_asset_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "visibility": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private",
+                        "draft"
+                    ]
                 }
             }
         },

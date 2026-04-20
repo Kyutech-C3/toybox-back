@@ -97,6 +97,47 @@ func TestAssetRepository_UploadFile(t *testing.T) {
 	require.Equal(t, []byte("dummy data"), content)
 }
 
+func TestAssetRepository_DeleteFile(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	s3Client := testutil.SetupTestS3(t)
+	repo := asset.NewAssetRepository(db, s3Client)
+
+	ctx := context.Background()
+	fileHeader := newTestFileHeader(t, "test-delete.png", []byte("to be deleted"))
+	assetID := uuid.New()
+
+	assetURL, _, err := repo.UploadFile(ctx, fileHeader, assetID, "png")
+	require.NoError(t, err)
+	require.NotNil(t, assetURL)
+
+	expectedKey := config.S3_DIR + "/image/" + assetID.String() + "/origin.png"
+	_, err = s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(config.S3_BUCKET),
+		Key:    aws.String(expectedKey),
+	})
+	require.NoError(t, err)
+
+	err = repo.DeleteFile(ctx, *assetURL)
+	require.NoError(t, err)
+
+	_, err = s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(config.S3_BUCKET),
+		Key:    aws.String(expectedKey),
+	})
+	require.Error(t, err)
+}
+
+func TestAssetRepository_DeleteFile_InvalidURL(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	s3Client := testutil.SetupTestS3(t)
+	repo := asset.NewAssetRepository(db, s3Client)
+
+	ctx := context.Background()
+
+	err := repo.DeleteFile(ctx, "invalid-url")
+	require.Error(t, err)
+}
+
 func newTestFileHeader(t *testing.T, filename string, content []byte) *multipart.FileHeader {
 	t.Helper()
 

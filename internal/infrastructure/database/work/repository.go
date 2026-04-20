@@ -281,3 +281,144 @@ func (r *WorkRepository) Create(ctx context.Context, work *entity.Work) (*entity
 
 	return dtoWork.ToWorkEntity(), nil
 }
+
+func (r *WorkRepository) Update(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToBeginTransaction
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	dtoWork := dto.ToWorkDTO(work)
+	_, err = tx.NewUpdate().Model(dtoWork).WherePK().Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Tagging{}).Where("work_id = ?", work.ID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+	_, err = tx.NewDelete().Model(&dto.URLInfo{}).Where("work_id = ?", work.ID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+	_, err = tx.NewDelete().Model(&dto.Thumbnail{}).Where("work_id = ?", work.ID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
+	thumbnail := &dto.Thumbnail{
+		WorkID:  dtoWork.ID,
+		AssetID: dtoWork.ThumbnailAssetID,
+	}
+	_, err = tx.NewInsert().Model(thumbnail).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
+	if len(dtoWork.URLs) > 0 {
+		_, err = tx.NewInsert().Model(&dtoWork.URLs).Exec(ctx)
+		if err != nil {
+			return nil, domainerrors.ErrFailedToUpdateWork
+		}
+	}
+
+	if len(dtoWork.TagIDs) > 0 {
+		taggings := make([]*dto.Tagging, len(dtoWork.TagIDs))
+		for i, tagID := range dtoWork.TagIDs {
+			taggings[i] = &dto.Tagging{
+				WorkID: dtoWork.ID,
+				TagID:  tagID,
+			}
+		}
+		_, err = tx.NewInsert().Model(&taggings).Exec(ctx)
+		if err != nil {
+			return nil, domainerrors.ErrFailedToUpdateWork
+		}
+	}
+	if len(dtoWork.Assets) > 0 {
+		for _, asset := range dtoWork.Assets {
+			_, err = tx.NewUpdate().Model(asset).Set("work_id = ?", dtoWork.ID).Where("id = ?", asset.ID).Exec(ctx)
+			if err != nil {
+				return nil, domainerrors.ErrFailedToUpdateWork
+			}
+		}
+	}
+	_, err = tx.NewUpdate().Model(&dto.Asset{}).Set("work_id = ?", dtoWork.ID).Where("id = ?", dtoWork.ThumbnailAssetID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, domainerrors.ErrFailedToCommitTransaction
+	}
+
+	return r.GetByID(ctx, work.ID)
+}
+
+func (r *WorkRepository) Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+
+	work, err := r.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if work.UserID != userID {
+		return domainerrors.ErrWorkNotOwnedByUser
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domainerrors.ErrFailedToBeginTransaction
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.NewDelete().Model(&dto.Tagging{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Thumbnail{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.URLInfo{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Work{}).Where("id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Asset{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return domainerrors.ErrFailedToCommitTransaction
+	}
+
+	return nil
+}
