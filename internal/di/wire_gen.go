@@ -58,7 +58,9 @@ func InitializeApp() (*App, func(), error) {
 	favoriteRepository := favorite.NewFavoriteRepository(db)
 	iFavoriteUsecase := ProvideFavoriteUseCase(favoriteRepository)
 	favoriteController := controller.NewFavoriteController(iFavoriteUsecase)
-	routerRouter := router.NewRouter(echo, userController, workController, commentController, authController, assetController, favoriteController)
+	iTagUseCase := ProvideTagUseCase(tagRepository)
+	tagController := controller.NewTagController(iTagUseCase)
+	routerRouter := router.NewRouter(echo, userController, workController, commentController, authController, assetController, favoriteController, tagController)
 	app := NewApp(routerRouter, db, client)
 	return app, func() {
 	}, nil
@@ -76,9 +78,10 @@ var UseCaseSet = wire.NewSet(
 	ProvideTokenProvider,
 	ProvideAssetUseCase,
 	ProvideFavoriteUseCase,
+	ProvideTagUseCase,
 )
 
-var ControllerSet = wire.NewSet(controller.NewUserController, controller.NewWorkController, controller.NewCommentController, controller.NewAuthController, controller.NewAssetController, controller.NewFavoriteController)
+var ControllerSet = wire.NewSet(controller.NewUserController, controller.NewWorkController, controller.NewCommentController, controller.NewAuthController, controller.NewAssetController, controller.NewFavoriteController, controller.NewTagController)
 
 var InfrastructureSet = wire.NewSet(
 	ProvideDatabase,
@@ -144,6 +147,11 @@ func ProvideAssetUseCase(assetRepo repository.AssetRepository) usecase.IAssetUse
 // ProvideFavoriteUseCase はFavoriteUseCaseを提供します
 func ProvideFavoriteUseCase(favoriteRepo repository.FavoriteRepository) usecase.IFavoriteUsecase {
 	return usecase.NewFavoriteUsecase(favoriteRepo)
+}
+
+// ProvideTagUseCase はTagUseCaseを提供します
+func ProvideTagUseCase(tagRepo repository.TagRepository) usecase.ITagUseCase {
+	return usecase.NewTagUseCase(tagRepo)
 }
 
 // ProvideEcho はEchoインスタンスを提供します

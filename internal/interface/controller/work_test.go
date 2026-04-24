@@ -17,7 +17,6 @@ import (
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
 	"github.com/simesaba80/toybox-back/internal/interface/controller/mock"
 	"github.com/simesaba80/toybox-back/internal/interface/schema"
-	"github.com/simesaba80/toybox-back/internal/util"
 	"github.com/simesaba80/toybox-back/pkg/echovalidator"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -25,10 +24,18 @@ import (
 
 func TestWorkController_GetAllWorks(t *testing.T) {
 	userID := uuid.New()
+	author := entity.NewUser(
+		"testuser",
+		"test@example.com",
+		"Test Author",
+		"discord123",
+		"http://example.com/avatar.png",
+	)
 	mockWork := &entity.Work{
 		ID:        uuid.New(),
 		Title:     "Test Work",
-		UserID:    uuid.New(),
+		UserID:    author.ID,
+		User:      author,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -56,7 +63,7 @@ func TestWorkController_GetAllWorks(t *testing.T) {
 			userID:      userID,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase, userID uuid.UUID) {
 				mockWorkUsecase.EXPECT().
-					GetAll(gomock.Any(), util.IntPtr(20), util.IntPtr(1), userID, []uuid.UUID(nil)).
+					GetAll(gomock.Any(), IntPtr(20), IntPtr(1), userID, []uuid.UUID(nil)).
 					Return([]*entity.Work{mockWork}, 1, 20, 1, nil)
 			},
 			wantStatus: http.StatusOK,
@@ -69,7 +76,7 @@ func TestWorkController_GetAllWorks(t *testing.T) {
 			userID:      uuid.Nil,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase, userID uuid.UUID) {
 				mockWorkUsecase.EXPECT().
-					GetAll(gomock.Any(), util.IntPtr(20), util.IntPtr(1), uuid.Nil, []uuid.UUID(nil)).
+					GetAll(gomock.Any(), IntPtr(20), IntPtr(1), uuid.Nil, []uuid.UUID(nil)).
 					Return([]*entity.Work{mockWork}, 1, 20, 1, nil)
 			},
 			wantStatus: http.StatusOK,
@@ -124,10 +131,18 @@ func TestWorkController_GetAllWorks(t *testing.T) {
 
 func TestWorkController_GetWorkByID(t *testing.T) {
 	workID := uuid.New()
+	author := entity.NewUser(
+		"testuser",
+		"test@example.com",
+		"Test Author",
+		"discord123",
+		"http://example.com/avatar.png",
+	)
 	mockWork := &entity.Work{
 		ID:        workID,
 		Title:     "Test Work",
-		UserID:    uuid.New(),
+		UserID:    author.ID,
+		User:      author,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -199,10 +214,20 @@ func TestWorkController_GetWorkByID(t *testing.T) {
 func TestWorkController_GetWorksByUserID(t *testing.T) {
 	targetUserID := uuid.New()
 	authenticatedUserID := uuid.New()
+	author := entity.NewUser(
+		"testuser",
+		"test@example.com",
+		"Test Author",
+		"discord123",
+		"http://example.com/avatar.png",
+	)
+	author.ID = targetUserID
+
 	mockWork1 := &entity.Work{
 		ID:        uuid.New(),
 		Title:     "Public Work",
 		UserID:    targetUserID,
+		User:      author,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -210,6 +235,7 @@ func TestWorkController_GetWorksByUserID(t *testing.T) {
 		ID:        uuid.New(),
 		Title:     "Private Work",
 		UserID:    targetUserID,
+		User:      author,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -646,4 +672,9 @@ func TestWorkController_DeleteWork(t *testing.T) {
 			}
 		})
 	}
+}
+
+// IntPtr returns a pointer to the given int value.
+func IntPtr(i int) *int {
+	return &i
 }

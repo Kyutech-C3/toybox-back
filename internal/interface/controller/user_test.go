@@ -136,6 +136,67 @@ func TestUserController_GetUserByID(t *testing.T) {
 	}
 }
 
+func TestUserController_GetIconAndURLByUserID(t *testing.T) {
+	userID := uuid.New()
+	mockUser := &entity.User{ID: userID, Name: "testuser"}
+	successResponseBytes, _ := json.Marshal(schema.ToIconAndURLResponse(mockUser))
+	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
+	tests := []struct {
+		name       string
+		setupMock  func(mockUserUsecase *mock.MockIUserUseCase)
+		wantStatus int
+		wantBody   []byte
+	}{
+		{
+			name: "正常系",
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					GetByUserID(gomock.Any(), gomock.Eq(userID)).
+					Return(mockUser, nil)
+			},
+			wantStatus: http.StatusOK,
+			wantBody:   successResponseBytes,
+		},
+		{
+			name: "異常系: Usecaseエラー",
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					GetByUserID(gomock.Any(), gomock.Eq(userID)).
+					Return(nil, errors.New("some error"))
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantBody:   internalErrorResponseBytes,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := echo.New()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockUsecase := mock.NewMockIUserUseCase(ctrl)
+			tt.setupMock(mockUsecase)
+
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, &schema.JWTCustomClaims{
+				UserID: userID.String(),
+			})
+
+			userController := controller.NewUserController(mockUsecase)
+			e.GET("/auth/users/me", func(c echo.Context) error {
+				c.Set("user", token)
+				return userController.GetIconAndURLByUserID(c)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/auth/users/me", nil)
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			assert.Equal(t, tt.wantStatus, rec.Code)
+			assert.JSONEq(t, string(tt.wantBody), rec.Body.String())
+		})
+	}
+}
 func TestUserController_UpdateUser(t *testing.T) {
 	userID := uuid.New()
 	now := time.Now()

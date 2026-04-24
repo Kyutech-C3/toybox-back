@@ -7,12 +7,19 @@ import (
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
 )
 
+type UserInWorkResponse struct {
+	ID          uuid.UUID `json:"id"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   string    `json:"avatar_url"`
+}
+
 type GetWorkOutput struct {
 	ID            uuid.UUID              `json:"id"`
 	Title         string                 `json:"title"`
 	Description   string                 `json:"description"`
-	UserID        uuid.UUID              `json:"user_id"`
+	User          *UserInWorkResponse    `json:"user"`
 	Visibility    string                 `json:"visibility"`
+	ThumbnailURL  string                 `json:"thumbnail_url"`
 	Assets        []AssetResponse        `json:"assets"`
 	Tags          []TagResponse          `json:"tags"`
 	Collaborators []CollaboratorResponse `json:"collaborators"`
@@ -91,12 +98,23 @@ func ToWorkResponse(work *entity.Work) GetWorkOutput {
 	if work == nil {
 		return GetWorkOutput{}
 	}
+
+	var user *UserInWorkResponse
+	if work.User != nil {
+		user = &UserInWorkResponse{
+			ID:          work.User.ID,
+			DisplayName: work.User.DisplayName,
+			AvatarURL:   work.User.AvatarURL,
+		}
+	}
+
 	return GetWorkOutput{
 		ID:            work.ID,
 		Title:         work.Title,
 		Description:   work.Description,
-		UserID:        work.UserID,
+		User:          user,
 		Visibility:    work.Visibility,
+		ThumbnailURL:  work.ThumbnailURL,
 		Assets:        ToAssetResponses(work.Assets),
 		Tags:          ToTagResponses(work.Tags),
 		Collaborators: ToCollaboratorResponses(work.Collaborators),

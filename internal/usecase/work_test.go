@@ -11,12 +11,12 @@ import (
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/usecase"
 	"github.com/simesaba80/toybox-back/internal/usecase/mock"
-	"github.com/simesaba80/toybox-back/internal/util"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
 func TestWorkUseCase_GetAll(t *testing.T) {
+	author := entity.NewUser("test", "test@test.com", "test", "test", "test")
 	tests := []struct {
 		name           string
 		limit          *int
@@ -40,8 +40,8 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: uuid.New()},
-					{ID: uuid.New(), Title: "Work2", Description: "Desc2", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: author.ID, User: author},
+					{ID: uuid.New(), Title: "Work2", Description: "Desc2", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(20), gomock.Eq(0), gomock.Nil()).
@@ -58,13 +58,13 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "正常系: カスタムページネーション(limit=10, page=1)",
-			limit:  util.IntPtr(10),
-			page:   util.IntPtr(1),
+			limit:  IntPtr(10),
+			page:   IntPtr(1),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(10), gomock.Eq(0), gomock.Nil()).
@@ -81,13 +81,13 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "正常系: カスタムページネーション(limit=20, page=2)",
-			limit:  util.IntPtr(20),
-			page:   util.IntPtr(2),
+			limit:  IntPtr(20),
+			page:   IntPtr(2),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work3", Description: "Desc3", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work3", Description: "Desc3", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(20), gomock.Eq(20), gomock.Nil()).
@@ -124,8 +124,8 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "エッジケース: limit=0, page=0",
-			limit:  util.IntPtr(0),
-			page:   util.IntPtr(0),
+			limit:  IntPtr(0),
+			page:   IntPtr(0),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
@@ -144,8 +144,8 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "エッジケース: 負の値(limit=-1, page=-1)",
-			limit:  util.IntPtr(-1),
-			page:   util.IntPtr(-1),
+			limit:  IntPtr(-1),
+			page:   IntPtr(-1),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
@@ -164,13 +164,13 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		},
 		{
 			name:   "エッジケース: limitのみ指定、pageはnil",
-			limit:  util.IntPtr(5),
+			limit:  IntPtr(5),
 			page:   nil,
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(5), gomock.Eq(0), gomock.Nil()).
@@ -188,12 +188,12 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		{
 			name:   "エッジケース: pageのみ指定、limitはnil",
 			limit:  nil,
-			page:   util.IntPtr(3),
+			page:   IntPtr(3),
 			userID: uuid.Nil,
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "Work1", Description: "Desc1", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAllPublic(gomock.Any(), gomock.Eq(20), gomock.Eq(40), gomock.Nil()).
@@ -231,12 +231,12 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 		{
 			name:   "正常系: 認証済みユーザーは限定作品含め取得",
 			limit:  nil,
-			page:   util.IntPtr(2),
+			page:   IntPtr(2),
 			userID: uuid.New(),
 			tagIDs: nil,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				expectedWorks := []*entity.Work{
-					{ID: uuid.New(), Title: "PrivateWork", Description: "Desc", UserID: uuid.New()},
+					{ID: uuid.New(), Title: "PrivateWork", Description: "Desc", UserID: author.ID, User: author},
 				}
 				m.EXPECT().
 					GetAll(gomock.Any(), gomock.Eq(20), gomock.Eq(20), gomock.Nil()).
@@ -299,11 +299,13 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 			name:   "正常系: 作品取得成功",
 			workID: uuid.New(),
 			setupWorkMock: func(m *mock.MockWorkRepository, workID uuid.UUID) {
+				author := entity.NewUser("test", "test@test.com", "test", "test", "test")
 				expectedWork := &entity.Work{
 					ID:          workID,
 					Title:       "Test Work",
 					Description: "Test Description",
-					UserID:      uuid.New(),
+					UserID:      author.ID,
+					User:        author,
 					CreatedAt:   time.Now(),
 					UpdatedAt:   time.Now(),
 				}
@@ -355,6 +357,7 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, tt.workID, got.ID)
+				assert.NotNil(t, got.User)
 			}
 		})
 	}
@@ -363,6 +366,8 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 func TestWorkUseCase_GetByUserID(t *testing.T) {
 	targetUserID := uuid.New()
 	authenticatedUserID := uuid.New()
+	author := entity.NewUser("test", "test@test.com", "test", "test", "test")
+	author.ID = targetUserID
 
 	tests := []struct {
 		name                string
@@ -384,6 +389,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 						Title:       "Public Work",
 						Description: "Public Description",
 						UserID:      userID,
+						User:        author,
 						Visibility:  "public",
 						CreatedAt:   time.Now(),
 						UpdatedAt:   time.Now(),
@@ -393,6 +399,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 						Title:       "Private Work",
 						Description: "Private Description",
 						UserID:      userID,
+						User:        author,
 						Visibility:  "private",
 						CreatedAt:   time.Now(),
 						UpdatedAt:   time.Now(),
@@ -418,6 +425,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 						Title:       "Public Work",
 						Description: "Public Description",
 						UserID:      userID,
+						User:        author,
 						Visibility:  "public",
 						CreatedAt:   time.Now(),
 						UpdatedAt:   time.Now(),
@@ -502,6 +510,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 				if tt.wantCount > 0 {
 					for _, work := range got {
 						assert.Equal(t, tt.userID, work.UserID)
+						assert.NotNil(t, work.User)
 					}
 				}
 			}
@@ -980,7 +989,6 @@ func TestWorkUseCase_DeleteWork(t *testing.T) {
 	}
 }
 
-
 func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 	userID := uuid.New()
 	collaborator1ID := uuid.New()
@@ -1127,14 +1135,14 @@ func TestWorkUseCase_UpdateWork_WithCollaborators(t *testing.T) {
 	}
 
 	tests := []struct {
-		name              string
-		collaboratorIDs   *[]uuid.UUID
-		setupWorkMock     func(*mock.MockWorkRepository)
-		setupTagMock      func(*mock.MockTagRepository)
-		setupAssetMock    func(*mock.MockAssetRepository)
-		setupUserMock     func(*mock.MockUserRepository)
-		wantErr           bool
-		wantErrMsg        error
+		name            string
+		collaboratorIDs *[]uuid.UUID
+		setupWorkMock   func(*mock.MockWorkRepository)
+		setupTagMock    func(*mock.MockTagRepository)
+		setupAssetMock  func(*mock.MockAssetRepository)
+		setupUserMock   func(*mock.MockUserRepository)
+		wantErr         bool
+		wantErrMsg      error
 	}{
 		{
 			name:            "正常系: 共同制作者を追加",
@@ -1236,4 +1244,9 @@ func TestWorkUseCase_UpdateWork_WithCollaborators(t *testing.T) {
 			}
 		})
 	}
+}
+
+// IntPtr returns a pointer to the given int value.
+func IntPtr(i int) *int {
+	return &i
 }

@@ -33,7 +33,7 @@ RUN apk --no-cache add ca-certificates
 # Build stage からビルドされた main だけを Run stage にコピーする。（重要）
 COPY --from=builder /bin/main /bin/main
 # ローカルの .env をコンテナ側の app フォルダにコピーする
-COPY .env /bin/
+COPY .env ./
 # EXPOSE 命令は、実際にポートを公開するわけではない。
 # これは、イメージを構築する人とコンテナを実行する人の間で、どのポートを公開するかについての一種の文書として機能する。
 # 今回、docker-compose.yml において、api コンテナは 8080 ポートを解放するため「8080」とする。

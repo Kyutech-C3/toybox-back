@@ -20,6 +20,11 @@ type GetUserOutput struct {
 	UpdatedAt   string    `json:"updated_at"`
 }
 
+type GetIconAndURLResponse struct {
+	DisplayName string `json:"display_name"`
+	IconURL     string `json:"icon_url"`
+}
+
 type UserListResponse struct {
 	Users []GetUserOutput `json:"users"`
 }
@@ -47,5 +52,15 @@ func ToUserResponse(user *entity.User) GetUserOutput {
 		GithubID:    user.GithubID,
 		CreatedAt:   user.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   user.UpdatedAt.Format(time.RFC3339),
+	}
+}
+
+func ToIconAndURLResponse(user *entity.User) GetIconAndURLResponse {
+	if user == nil {
+		return GetIconAndURLResponse{}
+	}
+	return GetIconAndURLResponse{
+		DisplayName: user.DisplayName,
+		IconURL:     user.AvatarURL,
 	}
 }

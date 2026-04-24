@@ -42,6 +42,21 @@ func (m *MockTagRepository) EXPECT() *MockTagRepositoryMockRecorder {
 	return m.recorder
 }
 
+// Create mocks base method.
+func (m *MockTagRepository) Create(ctx context.Context, tag *entity.Tag) (*entity.Tag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, tag)
+	ret0, _ := ret[0].(*entity.Tag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockTagRepositoryMockRecorder) Create(ctx, tag any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTagRepository)(nil).Create), ctx, tag)
+}
+
 // ExistAll mocks base method.
 func (m *MockTagRepository) ExistAll(ctx context.Context, ids []uuid.UUID) (bool, error) {
 	m.ctrl.T.Helper()
@@ -55,6 +70,21 @@ func (m *MockTagRepository) ExistAll(ctx context.Context, ids []uuid.UUID) (bool
 func (mr *MockTagRepositoryMockRecorder) ExistAll(ctx, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistAll", reflect.TypeOf((*MockTagRepository)(nil).ExistAll), ctx, ids)
+}
+
+// FindAll mocks base method.
+func (m *MockTagRepository) FindAll(ctx context.Context) ([]*entity.Tag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAll", ctx)
+	ret0, _ := ret[0].([]*entity.Tag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindAll indicates an expected call of FindAll.
+func (mr *MockTagRepositoryMockRecorder) FindAll(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAll", reflect.TypeOf((*MockTagRepository)(nil).FindAll), ctx)
 }
 
 // FindAllByIDs mocks base method.

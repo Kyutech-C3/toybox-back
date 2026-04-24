@@ -33,8 +33,10 @@ func TestWorkRepository_Create(t *testing.T) {
 	user := insertTestUser(t, db)
 	tag1 := insertTestTag(t, db, "go")
 	tag2 := insertTestTag(t, db, "rust")
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
 
 	work := newTestWork(user.ID, "create-title")
+	work.ThumbnailAssetID = thumbnailAsset.ID
 	work.TagIDs = []uuid.UUID{tag1.ID, tag2.ID}
 	work.Tags = []*entity.Tag{tag1, tag2}
 
@@ -51,6 +53,10 @@ func TestWorkRepository_Create(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, created.ID, fetched.ID)
 	require.Equal(t, 2, len(fetched.Tags))
+	require.NotNil(t, fetched.User)
+	require.Equal(t, user.ID, fetched.User.ID)
+	require.Equal(t, user.DisplayName, fetched.User.DisplayName)
+	require.Equal(t, thumbnailAsset.URL, fetched.ThumbnailURL)
 }
 
 func TestWorkRepository_GetAll(t *testing.T) {
@@ -63,8 +69,10 @@ func TestWorkRepository_GetAll(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		asset := insertTestAsset(t, db, user.ID)
+		thumbnailAsset := insertTestAsset(t, db, user.ID)
 		work := newTestWork(user.ID, "title-"+uuid.NewString())
 		work.Assets = []*entity.Asset{asset}
+		work.ThumbnailAssetID = thumbnailAsset.ID
 		work.TagIDs = []uuid.UUID{tag.ID}
 		work.Tags = []*entity.Tag{tag}
 		work.CreatedAt = work.CreatedAt.Add(time.Duration(i) * time.Minute)
@@ -82,6 +90,9 @@ func TestWorkRepository_GetAll(t *testing.T) {
 	for _, w := range works {
 		require.Equal(t, 1, len(w.Tags))
 		require.Equal(t, tag.Name, w.Tags[0].Name)
+		require.NotNil(t, w.User)
+		require.Equal(t, user.ID, w.User.ID)
+		require.NotEmpty(t, w.ThumbnailURL)
 	}
 }
 
@@ -96,9 +107,11 @@ func TestWorkRepository_GetAllPublic(t *testing.T) {
 	// 公開作品を2つ作成
 	for i := 0; i < 2; i++ {
 		asset := insertTestAsset(t, db, user.ID)
+		thumbnailAsset := insertTestAsset(t, db, user.ID)
 		work := newTestWork(user.ID, "public-title-"+uuid.NewString())
 		work.Visibility = "public"
 		work.Assets = []*entity.Asset{asset}
+		work.ThumbnailAssetID = thumbnailAsset.ID
 		work.TagIDs = []uuid.UUID{tag.ID}
 		work.Tags = []*entity.Tag{tag}
 		work.CreatedAt = work.CreatedAt.Add(time.Duration(i) * time.Minute)
@@ -109,9 +122,11 @@ func TestWorkRepository_GetAllPublic(t *testing.T) {
 
 	// 非公開作品を1つ作成
 	asset := insertTestAsset(t, db, user.ID)
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
 	privateWork := newTestWork(user.ID, "private-title-"+uuid.NewString())
 	privateWork.Visibility = "private"
 	privateWork.Assets = []*entity.Asset{asset}
+	privateWork.ThumbnailAssetID = thumbnailAsset.ID
 	privateWork.TagIDs = []uuid.UUID{tag.ID}
 	privateWork.Tags = []*entity.Tag{tag}
 	_, err := repo.Create(ctx, privateWork)
@@ -119,9 +134,11 @@ func TestWorkRepository_GetAllPublic(t *testing.T) {
 
 	// 下書き作品を1つ作成
 	asset = insertTestAsset(t, db, user.ID)
+	thumbnailAsset = insertTestAsset(t, db, user.ID)
 	draftWork := newTestWork(user.ID, "draft-title-"+uuid.NewString())
 	draftWork.Visibility = "draft"
 	draftWork.Assets = []*entity.Asset{asset}
+	draftWork.ThumbnailAssetID = thumbnailAsset.ID
 	draftWork.TagIDs = []uuid.UUID{tag.ID}
 	draftWork.Tags = []*entity.Tag{tag}
 	_, err = repo.Create(ctx, draftWork)
@@ -136,6 +153,8 @@ func TestWorkRepository_GetAllPublic(t *testing.T) {
 	// 全ての取得した作品が公開であることを確認
 	for _, work := range works {
 		require.Equal(t, "public", work.Visibility, "取得した作品は全て公開である")
+		require.NotNil(t, work.User)
+		require.Equal(t, user.ID, work.User.ID)
 	}
 
 	// 作成日時の降順でソートされていることを確認
@@ -155,9 +174,11 @@ func TestWorkRepository_GetAllPublic_WithTagFilter(t *testing.T) {
 	// tag1のみを持つ作品を2つ作成
 	for i := 0; i < 2; i++ {
 		asset := insertTestAsset(t, db, user.ID)
+		thumbnailAsset := insertTestAsset(t, db, user.ID)
 		w := newTestWork(user.ID, "go-work-"+uuid.NewString())
 		w.Visibility = "public"
 		w.Assets = []*entity.Asset{asset}
+		w.ThumbnailAssetID = thumbnailAsset.ID
 		w.TagIDs = []uuid.UUID{tag1.ID}
 		w.Tags = []*entity.Tag{tag1}
 		_, err := repo.Create(ctx, w)
@@ -166,9 +187,11 @@ func TestWorkRepository_GetAllPublic_WithTagFilter(t *testing.T) {
 
 	// tag2のみを持つ作品を1つ作成
 	asset := insertTestAsset(t, db, user.ID)
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
 	rustWork := newTestWork(user.ID, "rust-work")
 	rustWork.Visibility = "public"
 	rustWork.Assets = []*entity.Asset{asset}
+	rustWork.ThumbnailAssetID = thumbnailAsset.ID
 	rustWork.TagIDs = []uuid.UUID{tag2.ID}
 	rustWork.Tags = []*entity.Tag{tag2}
 	_, err := repo.Create(ctx, rustWork)
@@ -176,9 +199,11 @@ func TestWorkRepository_GetAllPublic_WithTagFilter(t *testing.T) {
 
 	// tag3のみを持つ作品を1つ作成
 	asset = insertTestAsset(t, db, user.ID)
+	thumbnailAsset = insertTestAsset(t, db, user.ID)
 	pythonWork := newTestWork(user.ID, "python-work")
 	pythonWork.Visibility = "public"
 	pythonWork.Assets = []*entity.Asset{asset}
+	pythonWork.ThumbnailAssetID = thumbnailAsset.ID
 	pythonWork.TagIDs = []uuid.UUID{tag3.ID}
 	pythonWork.Tags = []*entity.Tag{tag3}
 	_, err = repo.Create(ctx, pythonWork)
@@ -233,9 +258,11 @@ func TestWorkRepository_GetAll_WithTagFilter(t *testing.T) {
 
 	// tag1を持つ公開作品
 	asset1 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset1 := insertTestAsset(t, db, user.ID)
 	publicWork := newTestWork(user.ID, "frontend-public")
 	publicWork.Visibility = "public"
 	publicWork.Assets = []*entity.Asset{asset1}
+	publicWork.ThumbnailAssetID = thumbnailAsset1.ID
 	publicWork.TagIDs = []uuid.UUID{tag1.ID}
 	publicWork.Tags = []*entity.Tag{tag1}
 	_, err := repo.Create(ctx, publicWork)
@@ -243,9 +270,11 @@ func TestWorkRepository_GetAll_WithTagFilter(t *testing.T) {
 
 	// tag2を持つ非公開作品
 	asset2 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset2 := insertTestAsset(t, db, user.ID)
 	privateWork := newTestWork(user.ID, "backend-private")
 	privateWork.Visibility = "private"
 	privateWork.Assets = []*entity.Asset{asset2}
+	privateWork.ThumbnailAssetID = thumbnailAsset2.ID
 	privateWork.TagIDs = []uuid.UUID{tag2.ID}
 	privateWork.Tags = []*entity.Tag{tag2}
 	_, err = repo.Create(ctx, privateWork)
@@ -283,9 +312,11 @@ func TestWorkRepository_GetAllPublic_WithPagination(t *testing.T) {
 	// 公開作品を5つ作成
 	for i := 0; i < 5; i++ {
 		asset := insertTestAsset(t, db, user.ID)
+		thumbnailAsset := insertTestAsset(t, db, user.ID)
 		work := newTestWork(user.ID, "public-title-"+uuid.NewString())
 		work.Visibility = "public"
 		work.Assets = []*entity.Asset{asset}
+		work.ThumbnailAssetID = thumbnailAsset.ID
 		work.TagIDs = []uuid.UUID{tag.ID}
 		work.Tags = []*entity.Tag{tag}
 		work.CreatedAt = work.CreatedAt.Add(time.Duration(i) * time.Minute)
@@ -323,9 +354,11 @@ func TestWorkRepository_GetAllPublic_Empty(t *testing.T) {
 
 	// 非公開作品のみ作成
 	asset := insertTestAsset(t, db, user.ID)
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
 	privateWork := newTestWork(user.ID, "private-title")
 	privateWork.Visibility = "private"
 	privateWork.Assets = []*entity.Asset{asset}
+	privateWork.ThumbnailAssetID = thumbnailAsset.ID
 	privateWork.TagIDs = []uuid.UUID{tag.ID}
 	privateWork.Tags = []*entity.Tag{tag}
 	_, err := repo.Create(ctx, privateWork)
@@ -356,9 +389,11 @@ func TestWorkRepository_GetByUserID_Public(t *testing.T) {
 
 	// 公開作品を2つ作成
 	asset1 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset1 := insertTestAsset(t, db, user.ID)
 	publicWork1 := newTestWork(user.ID, "public-work-1")
 	publicWork1.Visibility = "public"
 	publicWork1.Assets = []*entity.Asset{asset1}
+	publicWork1.ThumbnailAssetID = thumbnailAsset1.ID
 	publicWork1.TagIDs = []uuid.UUID{tag.ID}
 	publicWork1.Tags = []*entity.Tag{tag}
 	publicWork1.CreatedAt = publicWork1.CreatedAt.Add(1 * time.Minute)
@@ -367,9 +402,11 @@ func TestWorkRepository_GetByUserID_Public(t *testing.T) {
 	require.NoError(t, err)
 
 	asset2 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset2 := insertTestAsset(t, db, user.ID)
 	publicWork2 := newTestWork(user.ID, "public-work-2")
 	publicWork2.Visibility = "public"
 	publicWork2.Assets = []*entity.Asset{asset2}
+	publicWork2.ThumbnailAssetID = thumbnailAsset2.ID
 	publicWork2.TagIDs = []uuid.UUID{tag.ID}
 	publicWork2.Tags = []*entity.Tag{tag}
 	_, err = repo.Create(ctx, publicWork2)
@@ -377,9 +414,11 @@ func TestWorkRepository_GetByUserID_Public(t *testing.T) {
 
 	// 非公開作品を1つ作成
 	asset3 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset3 := insertTestAsset(t, db, user.ID)
 	privateWork := newTestWork(user.ID, "private-work")
 	privateWork.Visibility = "private"
 	privateWork.Assets = []*entity.Asset{asset3}
+	privateWork.ThumbnailAssetID = thumbnailAsset3.ID
 	privateWork.TagIDs = []uuid.UUID{tag.ID}
 	privateWork.Tags = []*entity.Tag{tag}
 	_, err = repo.Create(ctx, privateWork)
@@ -387,9 +426,11 @@ func TestWorkRepository_GetByUserID_Public(t *testing.T) {
 
 	// 下書き作品を1つ作成
 	asset4 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset4 := insertTestAsset(t, db, user.ID)
 	draftWork := newTestWork(user.ID, "draft-work")
 	draftWork.Visibility = "draft"
 	draftWork.Assets = []*entity.Asset{asset4}
+	draftWork.ThumbnailAssetID = thumbnailAsset4.ID
 	draftWork.TagIDs = []uuid.UUID{tag.ID}
 	draftWork.Tags = []*entity.Tag{tag}
 	_, err = repo.Create(ctx, draftWork)
@@ -404,6 +445,7 @@ func TestWorkRepository_GetByUserID_Public(t *testing.T) {
 	for _, work := range works {
 		require.Equal(t, "public", work.Visibility, "取得した作品は全て公開である")
 		require.Equal(t, user.ID, work.UserID, "全ての作品が指定したユーザーのもの")
+		require.NotNil(t, work.User)
 	}
 }
 
@@ -417,9 +459,11 @@ func TestWorkRepository_GetByUserID_All(t *testing.T) {
 
 	// 公開作品を1つ作成
 	asset1 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset1 := insertTestAsset(t, db, user.ID)
 	publicWork := newTestWork(user.ID, "public-work")
 	publicWork.Visibility = "public"
 	publicWork.Assets = []*entity.Asset{asset1}
+	publicWork.ThumbnailAssetID = thumbnailAsset1.ID
 	publicWork.TagIDs = []uuid.UUID{tag.ID}
 	publicWork.Tags = []*entity.Tag{tag}
 	_, err := repo.Create(ctx, publicWork)
@@ -427,9 +471,11 @@ func TestWorkRepository_GetByUserID_All(t *testing.T) {
 
 	// 非公開作品を1つ作成
 	asset2 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset2 := insertTestAsset(t, db, user.ID)
 	privateWork := newTestWork(user.ID, "private-work")
 	privateWork.Visibility = "private"
 	privateWork.Assets = []*entity.Asset{asset2}
+	privateWork.ThumbnailAssetID = thumbnailAsset2.ID
 	privateWork.TagIDs = []uuid.UUID{tag.ID}
 	privateWork.Tags = []*entity.Tag{tag}
 	_, err = repo.Create(ctx, privateWork)
@@ -437,9 +483,11 @@ func TestWorkRepository_GetByUserID_All(t *testing.T) {
 
 	// 下書き作品を1つ作成
 	asset3 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset3 := insertTestAsset(t, db, user.ID)
 	draftWork := newTestWork(user.ID, "draft-work")
 	draftWork.Visibility = "draft"
 	draftWork.Assets = []*entity.Asset{asset3}
+	draftWork.ThumbnailAssetID = thumbnailAsset3.ID
 	draftWork.TagIDs = []uuid.UUID{tag.ID}
 	draftWork.Tags = []*entity.Tag{tag}
 	_, err = repo.Create(ctx, draftWork)
@@ -489,9 +537,11 @@ func TestWorkRepository_GetByUserID_DifferentUsers(t *testing.T) {
 
 	// user1の作品を作成
 	asset1 := insertTestAsset(t, db, user1.ID)
+	thumbnailAsset1 := insertTestAsset(t, db, user1.ID)
 	work1 := newTestWork(user1.ID, "user1-work")
 	work1.Visibility = "public"
 	work1.Assets = []*entity.Asset{asset1}
+	work1.ThumbnailAssetID = thumbnailAsset1.ID
 	work1.TagIDs = []uuid.UUID{tag.ID}
 	work1.Tags = []*entity.Tag{tag}
 	_, err := repo.Create(ctx, work1)
@@ -499,9 +549,11 @@ func TestWorkRepository_GetByUserID_DifferentUsers(t *testing.T) {
 
 	// user2の作品を作成
 	asset2 := insertTestAsset(t, db, user2.ID)
+	thumbnailAsset2 := insertTestAsset(t, db, user2.ID)
 	work2 := newTestWork(user2.ID, "user2-work")
 	work2.Visibility = "public"
 	work2.Assets = []*entity.Asset{asset2}
+	work2.ThumbnailAssetID = thumbnailAsset2.ID
 	work2.TagIDs = []uuid.UUID{tag.ID}
 	work2.Tags = []*entity.Tag{tag}
 	_, err = repo.Create(ctx, work2)
@@ -529,8 +581,10 @@ func TestWorkRepository_ExistsByID(t *testing.T) {
 	ctx := context.Background()
 	user := insertTestUser(t, db)
 	tag := insertTestTag(t, db, "test")
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
 
 	work := newTestWork(user.ID, "exists-title")
+	work.ThumbnailAssetID = thumbnailAsset.ID
 	work.TagIDs = []uuid.UUID{tag.ID}
 	work.Tags = []*entity.Tag{tag}
 	created, err := repo.Create(ctx, work)

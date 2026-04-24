@@ -12,8 +12,10 @@ type Work struct {
 	Description      string
 	DescriptionHTML  string
 	UserID           uuid.UUID
+	User             *User
 	Visibility       string
 	ThumbnailAssetID uuid.UUID
+	ThumbnailURL     string
 	Assets           []*Asset
 	URLs             []*string
 	TagIDs           []uuid.UUID

@@ -140,6 +140,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/tags": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new tag (authentication required)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Create a new tag",
+                "parameters": [
+                    {
+                        "description": "Tag to create",
+                        "name": "tag",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.CreateTagInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/users": {
             "put": {
                 "security": [
@@ -174,6 +231,49 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetUserOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/users/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get icon and URL by user ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get icon and URL by user ID",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetIconAndURLResponse"
                         }
                     },
                     "400": {
@@ -545,6 +645,32 @@ const docTemplate = `{
                         "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags": {
+            "get": {
+                "description": "Get all tags",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get all tags",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagListResponse"
                         }
                     },
                     "500": {
@@ -1041,6 +1167,19 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.CreateTagInput": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1
+                }
+            }
+        },
         "github_com_simesaba80_toybox-back_internal_interface_schema.CreateWorkInput": {
             "type": "object",
             "required": [
@@ -1139,6 +1278,17 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.GetIconAndURLResponse": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string"
+                },
+                "icon_url": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_simesaba80_toybox-back_internal_interface_schema.GetUserOutput": {
             "type": "object",
             "properties": {
@@ -1204,14 +1354,17 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagResponse"
                     }
                 },
+                "thumbnail_url": {
+                    "type": "string"
+                },
                 "title": {
                     "type": "string"
                 },
                 "updated_at": {
                     "type": "string"
                 },
-                "user_id": {
-                    "type": "string"
+                "user": {
+                    "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UserInWorkResponse"
                 },
                 "visibility": {
                     "type": "string"
@@ -1223,6 +1376,34 @@ const docTemplate = `{
             "properties": {
                 "is_favorite": {
                     "type": "boolean"
+                }
+            }
+        },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.TagDetailResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.TagListResponse": {
+            "type": "object",
+            "properties": {
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagDetailResponse"
+                    }
                 }
             }
         },
@@ -1323,6 +1504,20 @@ const docTemplate = `{
             }
         },
         "github_com_simesaba80_toybox-back_internal_interface_schema.UserInCommentResponse": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.UserInWorkResponse": {
             "type": "object",
             "properties": {
                 "avatar_url": {

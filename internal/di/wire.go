@@ -57,6 +57,7 @@ var UseCaseSet = wire.NewSet(
 	ProvideTokenProvider,
 	ProvideAssetUseCase,
 	ProvideFavoriteUseCase,
+	ProvideTagUseCase,
 )
 
 var ControllerSet = wire.NewSet(
@@ -66,6 +67,7 @@ var ControllerSet = wire.NewSet(
 	controller.NewAuthController,
 	controller.NewAssetController,
 	controller.NewFavoriteController,
+	controller.NewTagController,
 )
 
 var InfrastructureSet = wire.NewSet(
@@ -134,6 +136,11 @@ func ProvideAssetUseCase(assetRepo repository.AssetRepository) usecase.IAssetUse
 // ProvideFavoriteUseCase はFavoriteUseCaseを提供します
 func ProvideFavoriteUseCase(favoriteRepo repository.FavoriteRepository) usecase.IFavoriteUsecase {
 	return usecase.NewFavoriteUsecase(favoriteRepo)
+}
+
+// ProvideTagUseCase はTagUseCaseを提供します
+func ProvideTagUseCase(tagRepo repository.TagRepository) usecase.ITagUseCase {
+	return usecase.NewTagUseCase(tagRepo)
 }
 
 // ProvideEcho はEchoインスタンスを提供します

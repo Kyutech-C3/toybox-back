@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/dto"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/tag"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/testutil"
@@ -146,6 +147,96 @@ func TestTagRepository_FindAllByIDs(t *testing.T) {
 				}
 				for _, wantName := range tt.wantNames {
 					require.Contains(t, tagNames, wantName)
+				}
+			}
+		})
+	}
+}
+
+func TestTagRepository_Create(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := tag.NewTagRepository(db)
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		tagName string
+		wantErr bool
+	}{
+		{
+			name:    "正常系: タグ作成成功",
+			tagName: "新しいタグ",
+			wantErr: false,
+		},
+		{
+			name:    "正常系: 日本語タグ名",
+			tagName: "日本語タグ",
+			wantErr: false,
+		},
+		{
+			name:    "正常系: 英数字タグ名",
+			tagName: "tag123",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			now := time.Now().UTC().Truncate(time.Second)
+			inputTag := &entity.Tag{
+				ID:        uuid.New(),
+				Name:      tt.tagName,
+				CreatedAt: now,
+				UpdatedAt: now,
+			}
+
+			createdTag, err := repo.Create(ctx, inputTag)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, createdTag)
+				require.Equal(t, inputTag.ID, createdTag.ID)
+				require.Equal(t, tt.tagName, createdTag.Name)
+			}
+		})
+	}
+}
+
+func TestTagRepository_FindAll(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := tag.NewTagRepository(db)
+
+	ctx := context.Background()
+
+	// テスト用のタグを挿入（名前順でソートされることを確認するため、順序をバラバラに）
+	insertTestTag(t, db, "Rust")
+	insertTestTag(t, db, "Go")
+	insertTestTag(t, db, "Python")
+
+	tests := []struct {
+		name           string
+		wantMinCount   int
+		wantSortedByName bool
+	}{
+		{
+			name:             "正常系: 全タグ取得（名前順ソート）",
+			wantMinCount:     3,
+			wantSortedByName: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tags, err := repo.FindAll(ctx)
+			require.NoError(t, err)
+			require.GreaterOrEqual(t, len(tags), tt.wantMinCount)
+
+			if tt.wantSortedByName && len(tags) > 1 {
+				// 名前順にソートされていることを確認
+				for i := 0; i < len(tags)-1; i++ {
+					require.LessOrEqual(t, tags[i].Name, tags[i+1].Name, "タグが名前順でソートされていません")
 				}
 			}
 		})
