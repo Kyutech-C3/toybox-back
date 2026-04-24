@@ -23,6 +23,7 @@ type Work struct {
 	URLs             []*URLInfo       `bun:"rel:has-many,join:id=work_id"`
 	Tags             []*Tag           `bun:"m2m:tagging,join:Work=Tag"`
 	TagIDs           []uuid.UUID      `bun:"-"`
+	Collaborators    []*User          `bun:"m2m:collaborator"`
 	UserID           uuid.UUID        `bun:"user_id,notnull"`
 	User             *User            `bun:"rel:belongs-to,join:user_id=id"`
 	CreatedAt        time.Time        `bun:"created_at,notnull"`
@@ -45,6 +46,11 @@ func (w *Work) ToWorkEntity() *entity.Work {
 	for i, tag := range w.Tags {
 		entityTags[i] = tag.ToTagEntity()
 		tagIDs[i] = tag.ID
+	}
+
+	collaborators := make([]*entity.User, len(w.Collaborators))
+	for i, collaborator := range w.Collaborators {
+		collaborators[i] = collaborator.ToUserEntity()
 	}
 
 	var userEntity *entity.User
@@ -74,6 +80,7 @@ func (w *Work) ToWorkEntity() *entity.Work {
 		URLs:             urls,
 		TagIDs:           tagIDs,
 		Tags:             entityTags,
+		Collaborators:    collaborators,
 		CreatedAt:        w.CreatedAt,
 		UpdatedAt:        w.UpdatedAt,
 	}
@@ -95,6 +102,11 @@ func ToWorkDTO(entity *entity.Work) *Work {
 		tags[i] = ToTagDTO(tag)
 	}
 
+	collaborators := make([]*User, len(entity.Collaborators))
+	for i, collaborator := range entity.Collaborators {
+		collaborators[i] = ToUserDTO(collaborator)
+	}
+
 	return &Work{
 		ID:               entity.ID,
 		Title:            entity.Title,
@@ -105,12 +117,13 @@ func ToWorkDTO(entity *entity.Work) *Work {
 			WorkID:  entity.ID,
 			AssetID: entity.ThumbnailAssetID,
 		},
-		Visibility: types.Visibility(entity.Visibility),
-		Assets:     assets,
-		URLs:       urls,
-		Tags:       tags,
-		TagIDs:     entity.TagIDs,
-		CreatedAt:  entity.CreatedAt,
-		UpdatedAt:  entity.UpdatedAt,
+		Visibility:    types.Visibility(entity.Visibility),
+		Assets:        assets,
+		URLs:          urls,
+		Tags:          tags,
+		TagIDs:        entity.TagIDs,
+		Collaborators: collaborators,
+		CreatedAt:     entity.CreatedAt,
+		UpdatedAt:     entity.UpdatedAt,
 	}
 }

@@ -69,6 +69,7 @@ func SetupTestDB(tb testing.TB) *bun.DB {
 		dbInstance = bun.NewDB(sqlInstance, pgdialect.New())
 
 		dbInstance.RegisterModel((*dto.Tagging)(nil))
+		dbInstance.RegisterModel((*dto.Collaborator)(nil))
 	})
 
 	if initErr != nil {
@@ -158,6 +159,7 @@ func ResetTables(tb testing.TB) {
 	tables := []string{
 		"thumbnail",
 		"tagging",
+		"collaborator",
 		"tag",
 		"urlinfo",
 		"comment",

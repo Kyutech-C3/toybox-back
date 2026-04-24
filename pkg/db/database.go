@@ -30,6 +30,7 @@ func Init() {
 	DB = bun.NewDB(sqlDB, pgdialect.New())
 
 	DB.RegisterModel((*dto.Tagging)(nil))
+	DB.RegisterModel((*dto.Collaborator)(nil))
 
 	if err := sqlDB.Ping(); err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
