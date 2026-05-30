@@ -2,6 +2,8 @@ package router
 
 import (
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -54,6 +56,12 @@ func (r *Router) Setup() *echo.Echo {
 	r.echo.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
+
+	legacyToyBoxProxy := newLegacyToyBoxProxy(config.LEGACY_TOYBOX_BASE_URL)
+	r.echo.GET("/api/v1/works", legacyToyBoxProxy)
+	r.echo.GET("/api/v2/works", legacyToyBoxProxy)
+	r.echo.GET("/api/v1/blogs", legacyToyBoxProxy)
+	r.echo.GET("/api/v1/blogs/:blog_id", legacyToyBoxProxy)
 
 	// Auth
 	r.echo.GET("/auth/discord", r.AuthController.GetDiscordAuthURL)
@@ -121,4 +129,31 @@ func (r *Router) Setup() *echo.Echo {
 	e.POST("/tags", r.TagController.CreateTag)
 
 	return r.echo
+}
+
+func newLegacyToyBoxProxy(upstreamBaseURL string) echo.HandlerFunc {
+	if upstreamBaseURL == "" {
+		return func(c echo.Context) error {
+			return echo.NewHTTPError(http.StatusServiceUnavailable, "legacy toybox base url is not configured")
+		}
+	}
+
+	targetURL, err := url.Parse(upstreamBaseURL)
+	if err != nil {
+		return func(c echo.Context) error {
+			return echo.NewHTTPError(http.StatusServiceUnavailable, "legacy toybox base url is invalid")
+		}
+	}
+
+	proxy := httputil.NewSingleHostReverseProxy(targetURL)
+	proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, proxyErr error) {
+		w.Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
+		w.WriteHeader(http.StatusBadGateway)
+		_, _ = w.Write([]byte(`{"message":"legacy toybox proxy error"}`))
+	}
+
+	return func(c echo.Context) error {
+		proxy.ServeHTTP(c.Response(), c.Request())
+		return nil
+	}
 }
