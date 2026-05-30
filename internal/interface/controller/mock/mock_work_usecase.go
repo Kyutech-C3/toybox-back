@@ -43,18 +43,18 @@ func (m *MockIWorkUseCase) EXPECT() *MockIWorkUseCaseMockRecorder {
 }
 
 // CreateWork mocks base method.
-func (m *MockIWorkUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID) (*entity.Work, error) {
+func (m *MockIWorkUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs, collaboratorIDs []uuid.UUID) (*entity.Work, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWork", ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs)
+	ret := m.ctrl.Call(m, "CreateWork", ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs, collaboratorIDs)
 	ret0, _ := ret[0].(*entity.Work)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateWork indicates an expected call of CreateWork.
-func (mr *MockIWorkUseCaseMockRecorder) CreateWork(ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs any) *gomock.Call {
+func (mr *MockIWorkUseCaseMockRecorder) CreateWork(ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs, collaboratorIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).CreateWork), ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).CreateWork), ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs, collaboratorIDs)
 }
 
 // DeleteWork mocks base method.
@@ -120,16 +120,16 @@ func (mr *MockIWorkUseCaseMockRecorder) GetByUserID(ctx, userID, authenticatedUs
 }
 
 // UpdateWork mocks base method.
-func (m *MockIWorkUseCase) UpdateWork(ctx context.Context, workID, userID uuid.UUID, title, description, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID) (*entity.Work, error) {
+func (m *MockIWorkUseCase) UpdateWork(ctx context.Context, workID, userID uuid.UUID, title, description, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs, collaboratorIDs *[]uuid.UUID) (*entity.Work, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateWork", ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs)
+	ret := m.ctrl.Call(m, "UpdateWork", ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs, collaboratorIDs)
 	ret0, _ := ret[0].(*entity.Work)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateWork indicates an expected call of UpdateWork.
-func (mr *MockIWorkUseCaseMockRecorder) UpdateWork(ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs any) *gomock.Call {
+func (mr *MockIWorkUseCaseMockRecorder) UpdateWork(ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs, collaboratorIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).UpdateWork), ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).UpdateWork), ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs, collaboratorIDs)
 }

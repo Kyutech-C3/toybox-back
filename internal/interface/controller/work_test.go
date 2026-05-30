@@ -370,7 +370,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), input.Title, input.Description, input.Visibility, input.ThumbnailAssetID, input.AssetIDs, input.URLs, userID, input.TagIDs).
+					CreateWork(gomock.Any(), input.Title, input.Description, input.Visibility, input.ThumbnailAssetID, input.AssetIDs, input.URLs, userID, input.TagIDs, gomock.Any()).
 					Return(createdWork, nil)
 			},
 			wantStatus: http.StatusCreated,
@@ -388,7 +388,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("some error"))
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -468,7 +468,7 @@ func TestWorkController_UpdateWork(t *testing.T) {
 			userID: userID,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					UpdateWork(gomock.Any(), workID, userID, &updatedTitle, &updatedDescription, nil, nil, nil, nil, nil).
+					UpdateWork(gomock.Any(), workID, userID, &updatedTitle, &updatedDescription, nil, nil, nil, nil, nil, nil).
 					Return(updatedWorkEntity, nil)
 			},
 			wantStatus: http.StatusOK,
@@ -499,7 +499,7 @@ func TestWorkController_UpdateWork(t *testing.T) {
 			userID: userID,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					UpdateWork(gomock.Any(), workID, userID, &updatedTitle, &updatedDescription, nil, nil, nil, nil, nil).
+					UpdateWork(gomock.Any(), workID, userID, &updatedTitle, &updatedDescription, nil, nil, nil, nil, nil, nil).
 					Return(nil, domainerrors.ErrWorkNotFound)
 			},
 			wantStatus: http.StatusNotFound,
@@ -512,7 +512,7 @@ func TestWorkController_UpdateWork(t *testing.T) {
 			userID: uuid.New(), // Different user ID
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					UpdateWork(gomock.Any(), workID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					UpdateWork(gomock.Any(), workID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, domainerrors.ErrWorkNotOwnedByUser)
 			},
 			wantStatus: http.StatusForbidden,
@@ -525,7 +525,7 @@ func TestWorkController_UpdateWork(t *testing.T) {
 			userID: userID,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					UpdateWork(gomock.Any(), workID, userID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					UpdateWork(gomock.Any(), workID, userID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("some internal error"))
 			},
 			wantStatus: http.StatusInternalServerError,
