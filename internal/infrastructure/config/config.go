@@ -25,6 +25,7 @@ var (
 	S3_DIR                string
 	S3_BASE_URL           string
 	REGION_NAME           string
+	LEGACY_TOYBOX_BASE_URL string
 )
 
 // .envを呼び出します。
@@ -51,4 +52,5 @@ func LoadEnv() {
 	S3_DIR = os.Getenv("S3_DIR")
 	S3_BASE_URL = os.Getenv("S3_BASE_URL")
 	REGION_NAME = os.Getenv("REGION_NAME")
+	LEGACY_TOYBOX_BASE_URL = os.Getenv("LEGACY_TOYBOX_BASE_URL")
 }
