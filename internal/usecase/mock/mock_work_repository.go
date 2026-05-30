@@ -57,6 +57,20 @@ func (mr *MockWorkRepositoryMockRecorder) Create(ctx, work any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockWorkRepository)(nil).Create), ctx, work)
 }
 
+// Delete mocks base method.
+func (m *MockWorkRepository) Delete(ctx context.Context, id, userID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockWorkRepositoryMockRecorder) Delete(ctx, id, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockWorkRepository)(nil).Delete), ctx, id, userID)
+}
+
 // ExistsById mocks base method.
 func (m *MockWorkRepository) ExistsById(ctx context.Context, id uuid.UUID) (bool, error) {
 	m.ctrl.T.Helper()
@@ -132,4 +146,19 @@ func (m *MockWorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, 
 func (mr *MockWorkRepositoryMockRecorder) GetByUserID(ctx, userID, public any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserID", reflect.TypeOf((*MockWorkRepository)(nil).GetByUserID), ctx, userID, public)
+}
+
+// Update mocks base method.
+func (m *MockWorkRepository) Update(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, work)
+	ret0, _ := ret[0].(*entity.Work)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockWorkRepositoryMockRecorder) Update(ctx, work any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockWorkRepository)(nil).Update), ctx, work)
 }

@@ -58,6 +58,20 @@ func (mr *MockAssetRepositoryMockRecorder) Create(ctx, asset any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAssetRepository)(nil).Create), ctx, asset)
 }
 
+// DeleteFile mocks base method.
+func (m *MockAssetRepository) DeleteFile(ctx context.Context, url string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteFile", ctx, url)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFile indicates an expected call of DeleteFile.
+func (mr *MockAssetRepositoryMockRecorder) DeleteFile(ctx, url any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFile", reflect.TypeOf((*MockAssetRepository)(nil).DeleteFile), ctx, url)
+}
+
 // UploadAvatar mocks base method.
 func (m *MockAssetRepository) UploadAvatar(ctx context.Context, discordUserID, avatarHash string) (*string, error) {
 	m.ctrl.T.Helper()
