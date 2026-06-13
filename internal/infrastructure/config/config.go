@@ -26,6 +26,7 @@ var (
 	S3_BASE_URL            string
 	REGION_NAME            string
 	LEGACY_TOYBOX_BASE_URL string
+	LEGACY_TOYBOX_PROXY_HOST string
 )
 
 // .envを呼び出します。
