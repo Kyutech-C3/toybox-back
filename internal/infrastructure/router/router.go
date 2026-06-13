@@ -10,6 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/config"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/external/proxy"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
 	"github.com/simesaba80/toybox-back/internal/interface/schema"
 	"github.com/simesaba80/toybox-back/pkg/echovalidator"
@@ -57,7 +58,7 @@ func (r *Router) Setup() *echo.Echo {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
-	legacyToyBoxProxy := newLegacyToyBoxProxy(config.LEGACY_TOYBOX_BASE_URL)
+	legacyToyBoxProxy := proxy.NewLegacyToyBoxProxy(config.LEGACY_TOYBOX_BASE_URL, config.LEGACY_TOYBOX_PROXY_HOST)
 	r.echo.GET("/api/v1/works", legacyToyBoxProxy)
 	r.echo.GET("/api/v2/works", legacyToyBoxProxy)
 	r.echo.GET("/api/v1/blogs", legacyToyBoxProxy)
@@ -129,31 +130,4 @@ func (r *Router) Setup() *echo.Echo {
 	e.POST("/tags", r.TagController.CreateTag)
 
 	return r.echo
-}
-
-func newLegacyToyBoxProxy(upstreamBaseURL string) echo.HandlerFunc {
-	if upstreamBaseURL == "" {
-		return func(c echo.Context) error {
-			return echo.NewHTTPError(http.StatusServiceUnavailable, "legacy toybox base url is not configured")
-		}
-	}
-
-	targetURL, err := url.Parse(upstreamBaseURL)
-	if err != nil {
-		return func(c echo.Context) error {
-			return echo.NewHTTPError(http.StatusServiceUnavailable, "legacy toybox base url is invalid")
-		}
-	}
-
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
-	proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, proxyErr error) {
-		w.Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
-		w.WriteHeader(http.StatusBadGateway)
-		_, _ = w.Write([]byte(`{"message":"legacy toybox proxy error"}`))
-	}
-
-	return func(c echo.Context) error {
-		proxy.ServeHTTP(c.Response(), c.Request())
-		return nil
-	}
 }
