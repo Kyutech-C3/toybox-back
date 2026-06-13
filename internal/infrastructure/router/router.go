@@ -2,8 +2,6 @@ package router
 
 import (
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -130,4 +128,8 @@ func (r *Router) Setup() *echo.Echo {
 	e.POST("/tags", r.TagController.CreateTag)
 
 	return r.echo
+}
+
+func newLegacyToyBoxProxy(upstreamBaseURL string) echo.HandlerFunc {
+	return proxy.NewLegacyToyBoxProxy(upstreamBaseURL, config.LEGACY_TOYBOX_PROXY_HOST)
 }

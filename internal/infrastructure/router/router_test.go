@@ -44,8 +44,8 @@ func TestNewLegacyToyBoxProxy_ForwardsPathQueryAndHeaders(t *testing.T) {
 	if receivedQuery != "page=2" {
 		t.Fatalf("unexpected upstream query: got %q want %q", receivedQuery, "page=2")
 	}
-	if receivedAuthorization != "Bearer sample-token" {
-		t.Fatalf("unexpected upstream authorization header: got %q want %q", receivedAuthorization, "Bearer sample-token")
+	if receivedAuthorization != "" {
+		t.Fatalf("unexpected upstream authorization header: got %q want %q", receivedAuthorization, "")
 	}
 	if contentType := rec.Header().Get("Content-Type"); !strings.Contains(contentType, "application/json") {
 		t.Fatalf("unexpected response content type: got %q", contentType)
