@@ -9,6 +9,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+
+/* 
+ルーターに登録した旧ToyBox向けAPIのパスとクエリが、プロキシ先に渡されることを確認。
+認証情報のヘッダーがプロキシ先へ送信されないことを確認。 
+*/
 func TestNewLegacyToyBoxProxy_ForwardsPathQueryAndHeaders(t *testing.T) {
 	t.Helper()
 
@@ -52,6 +57,10 @@ func TestNewLegacyToyBoxProxy_ForwardsPathQueryAndHeaders(t *testing.T) {
 	}
 }
 
+
+/* 
+旧ToyBoxの接続先のURLが設定されていないときに、routerを経由していても503を返すことを確認
+*/
 func TestNewLegacyToyBoxProxy_ReturnsServiceUnavailableWhenBaseURLMissing(t *testing.T) {
 	t.Helper()
 
