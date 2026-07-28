@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/config"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/external/proxy"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
 	"github.com/simesaba80/toybox-back/internal/interface/schema"
 	"github.com/simesaba80/toybox-back/pkg/echovalidator"
@@ -54,6 +55,12 @@ func (r *Router) Setup() *echo.Echo {
 	r.echo.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
+
+	legacyToyBoxProxy := proxy.NewLegacyToyBoxProxy(config.LEGACY_TOYBOX_BASE_URL, config.LEGACY_TOYBOX_PROXY_HOST)
+	r.echo.GET("/api/v1/works", legacyToyBoxProxy)
+	r.echo.GET("/api/v2/works", legacyToyBoxProxy)
+	r.echo.GET("/api/v1/blogs", legacyToyBoxProxy)
+	r.echo.GET("/api/v1/blogs/:blog_id", legacyToyBoxProxy)
 
 	// Auth
 	r.echo.GET("/auth/discord", r.AuthController.GetDiscordAuthURL)
@@ -123,4 +130,8 @@ func (r *Router) Setup() *echo.Echo {
 	e.POST("/tags", r.TagController.CreateTag)
 
 	return r.echo
+}
+
+func newLegacyToyBoxProxy(upstreamBaseURL string) echo.HandlerFunc {
+	return proxy.NewLegacyToyBoxProxy(upstreamBaseURL, config.LEGACY_TOYBOX_PROXY_HOST)
 }
