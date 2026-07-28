@@ -216,8 +216,8 @@ func TestTagRepository_FindAll(t *testing.T) {
 	insertTestTag(t, db, "Python")
 
 	tests := []struct {
-		name             string
-		wantMinCount     int
+		name           string
+		wantMinCount   int
 		wantSortedByName bool
 	}{
 		{
