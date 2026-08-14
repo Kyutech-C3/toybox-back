@@ -20,9 +20,10 @@ type GetUserOutput struct {
 	UpdatedAt   string    `json:"updated_at"`
 }
 
-type GetIconAndURLResponse struct {
-	DisplayName string `json:"display_name"`
-	IconURL     string `json:"icon_url"`
+type GetCurrentUserResponse struct {
+	ID          uuid.UUID `json:"id"`
+	DisplayName string    `json:"display_name"`
+	IconURL     string    `json:"icon_url"`
 }
 
 type UserListResponse struct {
@@ -55,11 +56,12 @@ func ToUserResponse(user *entity.User) GetUserOutput {
 	}
 }
 
-func ToIconAndURLResponse(user *entity.User) GetIconAndURLResponse {
+func ToCurrentUserResponse(user *entity.User) GetCurrentUserResponse {
 	if user == nil {
-		return GetIconAndURLResponse{}
+		return GetCurrentUserResponse{}
 	}
-	return GetIconAndURLResponse{
+	return GetCurrentUserResponse{
+		ID:          user.ID,
 		DisplayName: user.DisplayName,
 		IconURL:     user.AvatarURL,
 	}

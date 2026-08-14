@@ -136,10 +136,16 @@ func TestUserController_GetUserByID(t *testing.T) {
 	}
 }
 
-func TestUserController_GetIconAndURLByUserID(t *testing.T) {
+func TestUserController_GetCurrentUser(t *testing.T) {
 	userID := uuid.New()
-	mockUser := &entity.User{ID: userID, Name: "testuser"}
-	successResponseBytes, _ := json.Marshal(schema.ToIconAndURLResponse(mockUser))
+	mockUser := &entity.User{
+		ID:          userID,
+		Name:        "testuser",
+		DisplayName: "Test User",
+		AvatarURL:   "https://example.com/icon.png",
+	}
+	successResponseBytes, _ := json.Marshal(schema.ToCurrentUserResponse(mockUser))
+	notFoundResponseBytes, _ := json.Marshal(map[string]string{"message": "ユーザーが見つかりませんでした"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
 	tests := []struct {
 		name       string
@@ -156,6 +162,16 @@ func TestUserController_GetIconAndURLByUserID(t *testing.T) {
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
+		},
+		{
+			name: "異常系: ユーザーが見つからない",
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					GetByUserID(gomock.Any(), gomock.Eq(userID)).
+					Return(nil, domainerrors.ErrUserNotFound)
+			},
+			wantStatus: http.StatusNotFound,
+			wantBody:   notFoundResponseBytes,
 		},
 		{
 			name: "異常系: Usecaseエラー",
@@ -184,7 +200,7 @@ func TestUserController_GetIconAndURLByUserID(t *testing.T) {
 			userController := controller.NewUserController(mockUsecase)
 			e.GET("/auth/users/me", func(c echo.Context) error {
 				c.Set("user", token)
-				return userController.GetIconAndURLByUserID(c)
+				return userController.GetCurrentUser(c)
 			})
 
 			req := httptest.NewRequest(http.MethodGet, "/auth/users/me", nil)
