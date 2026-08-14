@@ -33,13 +33,13 @@ func MigrateComments(ctx context.Context, sourceDB, targetDB bun.IDB) error {
 		}
 
 		newComment := &dto.Comment{
-			ID:        parsedOldID,
-			Content:   old.Content,
-			WorkID:    parsedOldWorkID,
-			UserID:    parsedOldUserID,
-			ReplyAt:   derefString(old.ReplyAt),
-			CreatedAt: old.CreatedAt,
-			UpdatedAt: old.UpdatedAt,
+			ID:         parsedOldID,
+			Content:    old.Content,
+			WorkID:     parsedOldWorkID,
+			UserID:     parsedOldUserID,
+			ReplyAt:    derefString(old.ReplyAt),
+			CreatedAt:  old.CreatedAt,
+			UpdatedAt:  old.UpdatedAt,
 		}
 		newComments = append(newComments, newComment)
 	}

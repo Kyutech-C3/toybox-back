@@ -9,24 +9,22 @@ import (
 )
 
 var (
-	ENV                      string
-	FRONTEND_URL             []string
-	DB_DSN                   string
-	POSTGRES_USER            string
-	POSTGRES_PASSWORD        string
-	POSTGRES_DB              string
-	POSTGRES_HOST            string
-	DISCORD_CLIENT_ID        string
-	DISCORD_CLIENT_SECRET    string
-	TOKEN_SECRET             string
-	DISCORD_GUILD_IDS        []string
-	REDIRECT_URL             string
-	S3_BUCKET                string
-	S3_DIR                   string
-	S3_BASE_URL              string
-	REGION_NAME              string
-	LEGACY_TOYBOX_BASE_URL   string
-	LEGACY_TOYBOX_PROXY_HOST string
+	ENV                   string
+	FRONTEND_URL          []string
+	DB_DSN                string
+	POSTGRES_USER         string
+	POSTGRES_PASSWORD     string
+	POSTGRES_DB           string
+	POSTGRES_HOST         string
+	DISCORD_CLIENT_ID     string
+	DISCORD_CLIENT_SECRET string
+	TOKEN_SECRET          string
+	DISCORD_GUILD_IDS     []string
+	REDIRECT_URL          string
+	S3_BUCKET             string
+	S3_DIR                string
+	S3_BASE_URL           string
+	REGION_NAME           string
 )
 
 // .envを呼び出します。
@@ -53,6 +51,4 @@ func LoadEnv() {
 	S3_DIR = os.Getenv("S3_DIR")
 	S3_BASE_URL = os.Getenv("S3_BASE_URL")
 	REGION_NAME = os.Getenv("REGION_NAME")
-	LEGACY_TOYBOX_BASE_URL = os.Getenv("LEGACY_TOYBOX_BASE_URL")
-	LEGACY_TOYBOX_PROXY_HOST = os.Getenv("LEGACY_TOYBOX_PROXY_HOST")
 }

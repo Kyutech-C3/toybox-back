@@ -34,8 +34,6 @@ $ go mod download
 # .envの作成と書き込み
 $ cp .env.example .env
 
-# 旧ToyBoxへ未実装APIをプロキシする場合は LEGACY_TOYBOX_BASE_URL を設定する
-
 # サーバーを起動
 $ docker compose up -d
 
