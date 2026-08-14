@@ -70,18 +70,18 @@ func (uc *UserController) GetUserByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, schema.ToUserResponse(user))
 }
 
-// GetIconAndURLByUserID godoc
-// @Summary Get icon and URL by user ID
-// @Description Get icon and URL by user ID
+// GetCurrentUser godoc
+// @Summary Get the current authenticated user
+// @Description Get the current authenticated user's ID, display name, and icon URL
 // @Tags users
 // @Produce json
-// @Success 200 {object} schema.GetIconAndURLResponse
+// @Success 200 {object} schema.GetCurrentUserResponse
 // @Failure 400 {object} echo.HTTPError
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /auth/users/me [get]
 // @Security BearerAuth
-func (uc *UserController) GetIconAndURLByUserID(c echo.Context) error {
+func (uc *UserController) GetCurrentUser(c echo.Context) error {
 	token := c.Get("user").(*jwt.Token)
 	claims := token.Claims.(*schema.JWTCustomClaims)
 	userID, err := uuid.Parse(claims.UserID)
@@ -92,7 +92,7 @@ func (uc *UserController) GetIconAndURLByUserID(c echo.Context) error {
 	if err != nil {
 		return handleUserError(err)
 	}
-	return c.JSON(http.StatusOK, schema.ToIconAndURLResponse(user))
+	return c.JSON(http.StatusOK, schema.ToCurrentUserResponse(user))
 }
 
 // UpdateUser godoc

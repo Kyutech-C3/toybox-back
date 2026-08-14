@@ -104,7 +104,7 @@ func (r *Router) Setup() *echo.Echo {
 
 	// User
 	e.PUT("/users", r.UserController.UpdateUser)
-	e.GET("/users/me", r.UserController.GetIconAndURLByUserID)
+	e.GET("/users/me", r.UserController.GetCurrentUser)
 
 	// Work
 	e.POST("/works", r.WorkController.CreateWork)

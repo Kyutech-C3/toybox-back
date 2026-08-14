@@ -261,19 +261,19 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get icon and URL by user ID",
+                "description": "Get the current authenticated user's ID, display name, and icon URL",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "users"
                 ],
-                "summary": "Get icon and URL by user ID",
+                "summary": "Get the current authenticated user",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetIconAndURLResponse"
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetCurrentUserResponse"
                         }
                     },
                     "400": {
@@ -1262,6 +1262,20 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.GetCurrentUserResponse": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string"
+                },
+                "icon_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_simesaba80_toybox-back_internal_interface_schema.GetDiscordAuthURLResponse": {
             "type": "object",
             "properties": {
@@ -1274,17 +1288,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "access_token": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_simesaba80_toybox-back_internal_interface_schema.GetIconAndURLResponse": {
-            "type": "object",
-            "properties": {
-                "display_name": {
-                    "type": "string"
-                },
-                "icon_url": {
                     "type": "string"
                 }
             }
