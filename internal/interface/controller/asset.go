@@ -44,6 +44,9 @@ func (ac *AssetController) UploadAsset(c echo.Context) error {
 	}
 	file, err := c.FormFile("file")
 	if err != nil {
+		if errors.Is(err, echo.ErrStatusRequestEntityTooLarge) {
+			return echo.ErrStatusRequestEntityTooLarge
+		}
 		return echo.NewHTTPError(http.StatusBadRequest, "File is required")
 	}
 	asset, err := ac.assetUsecase.UploadFile(c.Request().Context(), file, userID)

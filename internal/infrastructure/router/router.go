@@ -112,7 +112,7 @@ func (r *Router) Setup() *echo.Echo {
 	e.DELETE("/works/:work_id", r.WorkController.DeleteWork)
 
 	// Asset
-	e.POST("/works/asset", r.AssetController.UploadAsset, middleware.BodyLimit("2GB"))
+	e.POST("/works/asset", r.AssetController.UploadAsset, middleware.BodyLimit("2GiB"))
 
 	// Favorite
 	e.GET("/works/:work_id/favorite/is-favorite", r.FavoriteController.IsFavorite)
