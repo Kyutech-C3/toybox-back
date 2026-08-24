@@ -63,6 +63,8 @@ var (
 
 // アセット関連のエラー定義
 var (
+	ErrInvalidFileName     = errors.New("invalid file name")
+	ErrUnsupportedFileType = errors.New("unsupported file type")
 	ErrFailedToOpenFile    = errors.New("failed to open file")
 	ErrFailedToUploadFile  = errors.New("failed to upload file")
 	ErrFailedToCreateAsset = errors.New("failed to create asset")

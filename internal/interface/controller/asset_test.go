@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
@@ -23,6 +24,10 @@ import (
 )
 
 func newAssetUploadRequest(t *testing.T, path string, includeFile bool) *http.Request {
+	return newAssetUploadRequestWithContent(t, path, includeFile, []byte("dummy data"))
+}
+
+func newAssetUploadRequestWithContent(t *testing.T, path string, includeFile bool, content []byte) *http.Request {
 	t.Helper()
 
 	body := &bytes.Buffer{}
@@ -33,7 +38,7 @@ func newAssetUploadRequest(t *testing.T, path string, includeFile bool) *http.Re
 		if err != nil {
 			t.Fatalf("failed to create form file: %v", err)
 		}
-		if _, err := part.Write([]byte("dummy data")); err != nil {
+		if _, err := part.Write(content); err != nil {
 			t.Fatalf("failed to write file content: %v", err)
 		}
 	}
@@ -56,6 +61,8 @@ func TestAssetController_UploadAsset(t *testing.T) {
 	}))
 	fileRequiredResponseBytes, _ := json.Marshal(map[string]string{"message": "File is required"})
 	invalidRequestResponseBytes, _ := json.Marshal(map[string]string{"message": "無効なリクエストです"})
+	invalidFileNameResponseBytes, _ := json.Marshal(map[string]string{"message": "ファイル名が無効です"})
+	unsupportedFileTypeResponseBytes, _ := json.Marshal(map[string]string{"message": "対応していないファイル形式です"})
 	failedUploadResponseBytes, _ := json.Marshal(map[string]string{"message": "ファイルのアップロードに失敗しました"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
 
@@ -118,6 +125,34 @@ func TestAssetController_UploadAsset(t *testing.T) {
 			wantBody:   invalidRequestResponseBytes,
 		},
 		{
+			name:   "異常系: 無効なファイル名",
+			userID: uuid.New(),
+			setupMock: func(mockAssetUsecase *mock.MockIAssetUseCase, userID uuid.UUID) {
+				mockAssetUsecase.EXPECT().
+					UploadFile(gomock.Any(), gomock.Any(), userID).
+					Return(nil, domainerrors.ErrInvalidFileName)
+			},
+			request: func(t *testing.T) *http.Request {
+				return newAssetUploadRequest(t, "/works/asset", true)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   invalidFileNameResponseBytes,
+		},
+		{
+			name:   "異常系: 未対応のファイル形式",
+			userID: uuid.New(),
+			setupMock: func(mockAssetUsecase *mock.MockIAssetUseCase, userID uuid.UUID) {
+				mockAssetUsecase.EXPECT().
+					UploadFile(gomock.Any(), gomock.Any(), userID).
+					Return(nil, domainerrors.ErrUnsupportedFileType)
+			},
+			request: func(t *testing.T) *http.Request {
+				return newAssetUploadRequest(t, "/works/asset", true)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   unsupportedFileTypeResponseBytes,
+		},
+		{
 			name:   "異常系: アップロード失敗",
 			userID: uuid.New(),
 			setupMock: func(mockAssetUsecase *mock.MockIAssetUseCase, userID uuid.UUID) {
@@ -177,4 +212,34 @@ func TestAssetController_UploadAsset(t *testing.T) {
 			assert.JSONEq(t, string(tt.wantBody), rec.Body.String())
 		})
 	}
+}
+
+func TestAssetController_UploadAsset_BodyLimitWithoutContentLength(t *testing.T) {
+	e := echo.New()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAssetUsecase := mock.NewMockIAssetUseCase(ctrl)
+	mockAssetUsecase.EXPECT().
+		UploadFile(gomock.Any(), gomock.Any(), gomock.Any()).
+		Times(0)
+
+	assetController := controller.NewAssetController(mockAssetUsecase)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &schema.JWTCustomClaims{
+		UserID: uuid.NewString(),
+	})
+
+	e.POST("/works/asset", func(c echo.Context) error {
+		c.Set("user", token)
+		return assetController.UploadAsset(c)
+	}, middleware.BodyLimit("1KiB"))
+
+	req := newAssetUploadRequestWithContent(t, "/works/asset", true, bytes.Repeat([]byte("a"), 8*1024))
+	req.ContentLength = -1
+	rec := httptest.NewRecorder()
+
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+	assert.JSONEq(t, `{"message":"Request Entity Too Large"}`, rec.Body.String())
 }

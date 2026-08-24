@@ -730,9 +730,11 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Upload an asset
+      description: 'Upload an asset. Allowed extensions: png, jpg, jpeg, bmp, gif,
+        webp, mp4, mov, mp3, wav, m4a, zip. Maximum request body size is 2GiB.'
       parameters:
-      - description: File to upload
+      - description: 'File to upload. Allowed extensions: png, jpg, jpeg, bmp, gif,
+          webp, mp4, mov, mp3, wav, m4a, zip. Request body must not exceed 2GiB.'
         in: formData
         name: file
         required: true
@@ -746,6 +748,10 @@ paths:
             $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UploadAssetResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/echo.HTTPError'
         "500":

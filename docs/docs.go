@@ -494,7 +494,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload an asset",
+                "description": "Upload an asset. Allowed extensions: png, jpg, jpeg, bmp, gif, webp, mp4, mov, mp3, wav, m4a, zip. Maximum request body size is 2GiB.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -508,7 +508,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "file",
-                        "description": "File to upload",
+                        "description": "File to upload. Allowed extensions: png, jpg, jpeg, bmp, gif, webp, mp4, mov, mp3, wav, m4a, zip. Request body must not exceed 2GiB.",
                         "name": "file",
                         "in": "formData",
                         "required": true
@@ -523,6 +523,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/echo.HTTPError"
                         }
