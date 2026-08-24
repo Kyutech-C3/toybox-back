@@ -24,13 +24,14 @@ func NewAssetController(assetUsecase usecase.IAssetUseCase) *AssetController {
 
 // UploadAsset godoc
 // @Summary Upload an asset
-// @Description Upload an asset
+// @Description Upload an asset. Allowed extensions: png, jpg, jpeg, bmp, gif, webp, mp4, mov, mp3, wav, m4a, zip. Maximum request body size is 2GiB.
 // @Tags assets
 // @Accept multipart/form-data
 // @Produce json
-// @Param file formData file true "File to upload"
+// @Param file formData file true "File to upload. Allowed extensions: png, jpg, jpeg, bmp, gif, webp, mp4, mov, mp3, wav, m4a, zip. Request body must not exceed 2GiB."
 // @Success 200 {object} schema.UploadAssetResponse
 // @Failure 400 {object} echo.HTTPError
+// @Failure 413 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Security BearerAuth
 // @Router /auth/works/asset [post]
@@ -57,6 +58,10 @@ func handleAssetError(c echo.Context, err error) error {
 	switch {
 	case errors.Is(err, domainerrors.ErrInvalidRequestBody):
 		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
+	case errors.Is(err, domainerrors.ErrInvalidFileName):
+		return echo.NewHTTPError(http.StatusBadRequest, "ファイル名が無効です")
+	case errors.Is(err, domainerrors.ErrUnsupportedFileType):
+		return echo.NewHTTPError(http.StatusBadRequest, "対応していないファイル形式です")
 	case errors.Is(err, domainerrors.ErrFailedToOpenFile):
 		return echo.NewHTTPError(http.StatusInternalServerError, "ファイルの読み込みに失敗しました")
 	case errors.Is(err, domainerrors.ErrFailedToUploadFile):

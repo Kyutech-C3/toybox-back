@@ -95,6 +95,7 @@ func TestAssetRepository_UploadFile(t *testing.T) {
 	content, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Equal(t, []byte("dummy data"), content)
+	require.Equal(t, "image/png", aws.ToString(resp.ContentType))
 }
 
 func TestAssetRepository_DeleteFile(t *testing.T) {
