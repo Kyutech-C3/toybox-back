@@ -56,6 +56,8 @@ func TestAssetController_UploadAsset(t *testing.T) {
 	}))
 	fileRequiredResponseBytes, _ := json.Marshal(map[string]string{"message": "File is required"})
 	invalidRequestResponseBytes, _ := json.Marshal(map[string]string{"message": "無効なリクエストです"})
+	invalidFileNameResponseBytes, _ := json.Marshal(map[string]string{"message": "ファイル名が無効です"})
+	unsupportedFileTypeResponseBytes, _ := json.Marshal(map[string]string{"message": "対応していないファイル形式です"})
 	failedUploadResponseBytes, _ := json.Marshal(map[string]string{"message": "ファイルのアップロードに失敗しました"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
 
@@ -116,6 +118,34 @@ func TestAssetController_UploadAsset(t *testing.T) {
 			},
 			wantStatus: http.StatusBadRequest,
 			wantBody:   invalidRequestResponseBytes,
+		},
+		{
+			name:   "異常系: 無効なファイル名",
+			userID: uuid.New(),
+			setupMock: func(mockAssetUsecase *mock.MockIAssetUseCase, userID uuid.UUID) {
+				mockAssetUsecase.EXPECT().
+					UploadFile(gomock.Any(), gomock.Any(), userID).
+					Return(nil, domainerrors.ErrInvalidFileName)
+			},
+			request: func(t *testing.T) *http.Request {
+				return newAssetUploadRequest(t, "/works/asset", true)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   invalidFileNameResponseBytes,
+		},
+		{
+			name:   "異常系: 未対応のファイル形式",
+			userID: uuid.New(),
+			setupMock: func(mockAssetUsecase *mock.MockIAssetUseCase, userID uuid.UUID) {
+				mockAssetUsecase.EXPECT().
+					UploadFile(gomock.Any(), gomock.Any(), userID).
+					Return(nil, domainerrors.ErrUnsupportedFileType)
+			},
+			request: func(t *testing.T) *http.Request {
+				return newAssetUploadRequest(t, "/works/asset", true)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   unsupportedFileTypeResponseBytes,
 		},
 		{
 			name:   "異常系: アップロード失敗",
