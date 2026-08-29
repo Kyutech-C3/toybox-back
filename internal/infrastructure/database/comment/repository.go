@@ -11,6 +11,7 @@ import (
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/dto"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/database/types"
 )
 
 type CommentRepository struct {
@@ -89,4 +90,22 @@ func (r *CommentRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity
 	}
 
 	return dtoComment.ToCommentEntity(), nil
+}
+
+func (r *CommentRepository) Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	comment, err := r.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if comment.UserID != userID {
+		return domainerrors.ErrCommentNotOwnedByUser
+	}
+
+	_, err = r.db.NewUpdate().Model(&dto.Comment{}).
+		Set("status = ?", types.CommentStatusDeleted).
+		Where("id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteComment
+	}
+	return nil
 }

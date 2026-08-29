@@ -16,6 +16,7 @@ type UserInCommentResponse struct {
 type CommentResponse struct {
 	ID        string                 `json:"id"`
 	Content   string                 `json:"content"`
+	Status    string                 `json:"status"`
 	ReplyAt   string                 `json:"reply_at"`
 	User      *UserInCommentResponse `json:"user"`
 	CreatedAt string                 `json:"created_at"`
@@ -40,6 +41,18 @@ func ToCommentResponse(comment *entity.Comment) *CommentResponse {
 		return nil
 	}
 
+	if comment.Status == "deleted" {
+		return &CommentResponse{
+			ID:        comment.ID.String(),
+			Content:   "",
+			Status:    comment.Status,
+			ReplyAt:   comment.ReplyAt,
+			User:      nil,
+			CreatedAt: comment.CreatedAt.Format(time.RFC3339),
+			UpdatedAt: comment.UpdatedAt.Format(time.RFC3339),
+		}
+	}
+
 	var user *UserInCommentResponse
 	if comment.User != nil && comment.User.ID != uuid.Nil {
 		user = &UserInCommentResponse{
@@ -52,6 +65,7 @@ func ToCommentResponse(comment *entity.Comment) *CommentResponse {
 	return &CommentResponse{
 		ID:        comment.ID.String(),
 		Content:   comment.Content,
+		Status:    comment.Status,
 		ReplyAt:   comment.ReplyAt,
 		User:      user,
 		CreatedAt: comment.CreatedAt.Format(time.RFC3339),
