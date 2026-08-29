@@ -37,6 +37,7 @@ func TestCommentRepository_Create(t *testing.T) {
 		WorkID:    workUUID,
 		UserID:    uuid.New(),
 		ReplyAt:   "",
+		Status:    "active",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -49,6 +50,7 @@ func TestCommentRepository_Create(t *testing.T) {
 		WorkID:    workUUID,
 		UserID:    uuid.Nil,
 		ReplyAt:   "",
+		Status:    "active",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -69,6 +71,7 @@ func TestCommentRepository_FindByWorkID(t *testing.T) {
 		WorkID:    workUUID,
 		UserID:    uuid.New(),
 		ReplyAt:   "",
+		Status:    "active",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -95,6 +98,7 @@ func TestCommentRepository_FindByID(t *testing.T) {
 		WorkID:    workUUID,
 		UserID:    uuid.New(),
 		ReplyAt:   "",
+		Status:    "active",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -105,6 +109,43 @@ func TestCommentRepository_FindByID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, comment.Content, found.Content)
 	require.Equal(t, comment.WorkID, found.WorkID)
+}
+
+func TestCommentRepository_Delete(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	commentRepo := comment.NewCommentRepository(db)
+
+	ctx := context.Background()
+	work := insertTestWork(t, db)
+	workUUID := work.ID
+	ownerID := uuid.New()
+
+	comment := &entity.Comment{
+		ID:        uuid.New(),
+		Content:   "delete-content",
+		WorkID:    workUUID,
+		UserID:    ownerID,
+		ReplyAt:   "",
+		Status:    "active",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	created, err := commentRepo.Create(ctx, comment)
+	require.NoError(t, err)
+
+	err = commentRepo.Delete(ctx, created.ID, uuid.New())
+	require.Error(t, err, "本人以外による削除はエラーになるべき")
+
+	found, err := commentRepo.FindByID(ctx, created.ID)
+	require.NoError(t, err)
+	require.Equal(t, "active", found.Status, "他人による削除の試みでステータスが変わってはいけない")
+
+	err = commentRepo.Delete(ctx, created.ID, ownerID)
+	require.NoError(t, err)
+
+	found, err = commentRepo.FindByID(ctx, created.ID)
+	require.NoError(t, err)
+	require.Equal(t, "deleted", found.Status)
 }
 
 func insertTestWork(t *testing.T, db *bun.DB) *entity.Work {

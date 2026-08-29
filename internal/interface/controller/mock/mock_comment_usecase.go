@@ -57,6 +57,20 @@ func (mr *MockICommentUsecaseMockRecorder) CreateComment(ctx, content, workID, u
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateComment", reflect.TypeOf((*MockICommentUsecase)(nil).CreateComment), ctx, content, workID, userID, replyAt)
 }
 
+// DeleteComment mocks base method.
+func (m *MockICommentUsecase) DeleteComment(ctx context.Context, id, userID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteComment", ctx, id, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteComment indicates an expected call of DeleteComment.
+func (mr *MockICommentUsecaseMockRecorder) DeleteComment(ctx, id, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteComment", reflect.TypeOf((*MockICommentUsecase)(nil).DeleteComment), ctx, id, userID)
+}
+
 // GetCommentsByWorkID mocks base method.
 func (m *MockICommentUsecase) GetCommentsByWorkID(ctx context.Context, workID uuid.UUID) ([]*entity.Comment, error) {
 	m.ctrl.T.Helper()
