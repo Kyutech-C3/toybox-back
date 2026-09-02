@@ -89,6 +89,12 @@ https://github.com/Kyutech-C3/toybox-server
   - 外部リンクの挿入
   - いいね
 
+- コメント
+
+  - 作品へのコメント投稿(匿名可)、返信
+  - 作品ごとのコメント一覧取得
+  - コメントの削除(論理削除)
+
 - 一覧/検索
 
   - ページネーション
@@ -389,3 +395,4 @@ go test -tags=integration ./internal/infrastructure/...
 2025/11/29 simesaba80
 2025/12/08 simesaba80
 2026/08/24 simesaba80
+2026/08/29 sharow2515

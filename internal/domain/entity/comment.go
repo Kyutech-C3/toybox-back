@@ -13,6 +13,7 @@ type Comment struct {
 	UserID    uuid.UUID
 	ReplyAt   string
 	User      *User
+	Status    string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -24,6 +25,7 @@ func NewComment(content string, workID uuid.UUID, userID uuid.UUID, replyAt stri
 		WorkID:    workID,
 		UserID:    userID,
 		ReplyAt:   replyAt,
+		Status:    "active",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

@@ -42,6 +42,8 @@ definitions:
         type: string
       reply_at:
         type: string
+      status:
+        type: string
       updated_at:
         type: string
       user:
@@ -347,6 +349,39 @@ info:
   title: Toybox API
   version: "1.0"
 paths:
+  /auth/comments/{comment_id}:
+    delete:
+      description: Delete a comment. Only the author of the comment can delete it.
+      parameters:
+      - description: Comment ID
+        in: path
+        name: comment_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Delete a comment
+      tags:
+      - comments
   /auth/discord:
     get:
       description: Get Discord authentication URL
