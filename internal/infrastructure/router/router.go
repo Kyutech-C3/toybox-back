@@ -44,7 +44,7 @@ func (r *Router) Setup() *echo.Echo {
 	r.echo.Use(middleware.Recover())
 	r.echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     config.FRONTEND_URL,
-		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		AllowCredentials: true,
 	}))
