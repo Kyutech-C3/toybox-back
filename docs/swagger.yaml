@@ -203,12 +203,18 @@ definitions:
         items:
           $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagResponse'
         type: array
+      thumbnail_asset_id:
+        type: string
       thumbnail_url:
         type: string
       title:
         type: string
       updated_at:
         type: string
+      urls:
+        items:
+          type: string
+        type: array
       user:
         $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UserInWorkResponse'
       visibility:

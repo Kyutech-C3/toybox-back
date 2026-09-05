@@ -14,17 +14,19 @@ type UserInWorkResponse struct {
 }
 
 type GetWorkOutput struct {
-	ID            uuid.UUID              `json:"id"`
-	Title         string                 `json:"title"`
-	Description   string                 `json:"description"`
-	User          *UserInWorkResponse    `json:"user"`
-	Visibility    string                 `json:"visibility"`
-	ThumbnailURL  string                 `json:"thumbnail_url"`
-	Assets        []AssetResponse        `json:"assets"`
-	Tags          []TagResponse          `json:"tags"`
-	Collaborators []CollaboratorResponse `json:"collaborators"`
-	CreatedAt     string                 `json:"created_at"`
-	UpdatedAt     string                 `json:"updated_at"`
+	ID               uuid.UUID              `json:"id"`
+	Title            string                 `json:"title"`
+	Description      string                 `json:"description"`
+	User             *UserInWorkResponse    `json:"user"`
+	Visibility       string                 `json:"visibility"`
+	ThumbnailAssetID uuid.UUID              `json:"thumbnail_asset_id"`
+	ThumbnailURL     string                 `json:"thumbnail_url"`
+	Assets           []AssetResponse        `json:"assets"`
+	URLs             []string               `json:"urls"`
+	Tags             []TagResponse          `json:"tags"`
+	Collaborators    []CollaboratorResponse `json:"collaborators"`
+	CreatedAt        string                 `json:"created_at"`
+	UpdatedAt        string                 `json:"updated_at"`
 }
 
 type CreateWorkInput struct {
@@ -109,18 +111,28 @@ func ToWorkResponse(work *entity.Work) GetWorkOutput {
 	}
 
 	return GetWorkOutput{
-		ID:            work.ID,
-		Title:         work.Title,
-		Description:   work.Description,
-		User:          user,
-		Visibility:    work.Visibility,
-		ThumbnailURL:  work.ThumbnailURL,
-		Assets:        ToAssetResponses(work.Assets),
-		Tags:          ToTagResponses(work.Tags),
-		Collaborators: ToCollaboratorResponses(work.Collaborators),
-		CreatedAt:     work.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:     work.UpdatedAt.Format(time.RFC3339),
+		ID:               work.ID,
+		Title:            work.Title,
+		Description:      work.Description,
+		User:             user,
+		Visibility:       work.Visibility,
+		ThumbnailAssetID: work.ThumbnailAssetID,
+		ThumbnailURL:     work.ThumbnailURL,
+		Assets:           ToAssetResponses(work.Assets),
+		URLs:             ToURLs(work.URLs),
+		Tags:             ToTagResponses(work.Tags),
+		Collaborators:    ToCollaboratorResponses(work.Collaborators),
+		CreatedAt:        work.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:        work.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+func ToURLs(urls []*string) []string {
+	res := make([]string, 0, len(urls))
+	for _, url := range urls {
+		res = append(res, *url)
+	}
+	return res
 }
 
 func ToCreateWorkOutput(work *entity.Work) CreateWorkOutput {

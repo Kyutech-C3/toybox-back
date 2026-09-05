@@ -138,13 +138,18 @@ func TestWorkController_GetWorkByID(t *testing.T) {
 		"discord123",
 		"http://example.com/avatar.png",
 	)
+	thumbnailAssetID := uuid.New()
+	url1 := "https://example.com/1"
+	url2 := "https://example.com/2"
 	mockWork := &entity.Work{
-		ID:        workID,
-		Title:     "Test Work",
-		UserID:    author.ID,
-		User:      author,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:               workID,
+		Title:            "Test Work",
+		UserID:           author.ID,
+		User:             author,
+		ThumbnailAssetID: thumbnailAssetID,
+		URLs:             []*string{&url1, &url2},
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
 	successResponseBytes, _ := json.Marshal(schema.ToWorkResponse(mockWork))
 	invalidIDResponseBytes, _ := json.Marshal(map[string]string{"message": "無効なリクエストです"})

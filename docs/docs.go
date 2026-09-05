@@ -1363,6 +1363,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagResponse"
                     }
                 },
+                "thumbnail_asset_id": {
+                    "type": "string"
+                },
                 "thumbnail_url": {
                     "type": "string"
                 },
@@ -1371,6 +1374,12 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "user": {
                     "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UserInWorkResponse"
