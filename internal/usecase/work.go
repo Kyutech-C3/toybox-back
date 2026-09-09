@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
@@ -172,7 +173,14 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 	if thumbnailAssetID != nil {
 		work.ThumbnailAssetID = *thumbnailAssetID
 	}
+	var removedAssets []*entity.Asset
 	if assetIDs != nil {
+		for _, oldAsset := range work.Assets {
+			if oldAsset.ID != work.ThumbnailAssetID && !slices.Contains(*assetIDs, oldAsset.ID) {
+				removedAssets = append(removedAssets, oldAsset)
+			}
+		}
+
 		assets := make([]*entity.Asset, len(*assetIDs))
 		for i, assetID := range *assetIDs {
 			assets[i] = &entity.Asset{
@@ -224,6 +232,12 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 	updatedWork, err := uc.workRepo.Update(ctx, work)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update work: %w", err)
+	}
+
+	for _, asset := range removedAssets {
+		if err := uc.assetRepo.DeleteFile(ctx, asset.URL); err != nil {
+			return nil, fmt.Errorf("failed to delete removed asset file: %w", err)
+		}
 	}
 
 	return updatedWork, nil

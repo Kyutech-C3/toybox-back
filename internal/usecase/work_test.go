@@ -760,12 +760,25 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 		UpdatedAt:   time.Now(),
 	}
 
+	keptAssetID := uuid.New()
+	newWorkWithAssets := func() *entity.Work {
+		return &entity.Work{
+			ID:     workID,
+			UserID: userID,
+			Assets: []*entity.Asset{
+				{ID: keptAssetID, URL: "http://kept-asset.url"},
+				{ID: uuid.New(), URL: "http://removed-asset.url"},
+			},
+		}
+	}
+
 	tests := []struct {
 		name           string
 		workID         uuid.UUID
 		userID         uuid.UUID
 		title          *string
 		description    *string
+		assetIDs       *[]uuid.UUID
 		setupWorkMock  func(*mock.MockWorkRepository)
 		setupTagMock   func(*mock.MockTagRepository)
 		setupAssetMock func(*mock.MockAssetRepository)
@@ -842,6 +855,36 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
 			wantErr:        true,
 		},
+		{
+			name:     "正常系: asset_idsから除外されたアセットのファイルが削除される",
+			workID:   workID,
+			userID:   userID,
+			assetIDs: &[]uuid.UUID{keptAssetID},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithAssets(), nil).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().DeleteFile(gomock.Any(), "http://removed-asset.url").Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:     "異常系: 除外されたアセットのファイル削除に失敗する",
+			workID:   workID,
+			userID:   userID,
+			assetIDs: &[]uuid.UUID{keptAssetID},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithAssets(), nil).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().DeleteFile(gomock.Any(), "http://removed-asset.url").Return(errors.New("s3 error")).Times(1)
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -859,7 +902,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			tt.setupAssetMock(mockAssetRepo)
 
 			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
-			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, nil, nil, nil, nil, nil)
+			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, nil, tt.assetIDs, nil, nil, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)

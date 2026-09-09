@@ -636,6 +636,44 @@ func TestWorkRepository_Update(t *testing.T) {
 	require.Equal(t, "private", fetched.Visibility)
 }
 
+func TestWorkRepository_Update_RemovesUnlinkedAssets(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
+	keptAsset := insertTestAsset(t, db, user.ID)
+	removedAsset := insertTestAsset(t, db, user.ID)
+
+	workEntity := newTestWork(user.ID, "work-with-assets")
+	workEntity.ThumbnailAssetID = thumbnailAsset.ID
+	workEntity.Assets = []*entity.Asset{keptAsset, removedAsset}
+	created, err := repo.Create(ctx, workEntity)
+	require.NoError(t, err)
+
+	created.Assets = []*entity.Asset{keptAsset}
+	_, err = repo.Update(ctx, created)
+	require.NoError(t, err)
+
+	fetched, err := repo.GetByID(ctx, created.ID)
+	require.NoError(t, err)
+	fetchedAssetIDs := make([]uuid.UUID, len(fetched.Assets))
+	for i, asset := range fetched.Assets {
+		fetchedAssetIDs[i] = asset.ID
+	}
+	require.ElementsMatch(t, []uuid.UUID{keptAsset.ID, thumbnailAsset.ID}, fetchedAssetIDs)
+	require.Equal(t, thumbnailAsset.URL, fetched.ThumbnailURL)
+
+	removedExists, err := db.NewSelect().Model(&dto.Asset{}).Where("id = ?", removedAsset.ID).Exists(ctx)
+	require.NoError(t, err)
+	require.False(t, removedExists, "asset_idsから外れたアセットは削除される")
+
+	thumbnailExists, err := db.NewSelect().Model(&dto.Asset{}).Where("id = ?", thumbnailAsset.ID).Exists(ctx)
+	require.NoError(t, err)
+	require.True(t, thumbnailExists, "サムネイルアセットは削除されない")
+}
+
 func TestWorkRepository_Delete(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := work.NewWorkRepository(db)

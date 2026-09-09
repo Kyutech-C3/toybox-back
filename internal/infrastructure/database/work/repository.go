@@ -339,6 +339,21 @@ func (r *WorkRepository) Update(ctx context.Context, work *entity.Work) (*entity
 		return nil, domainerrors.ErrFailedToUpdateWork
 	}
 
+	// +1はThumbnailAssetIDの分
+	keepAssetIDs := make([]uuid.UUID, 0, len(dtoWork.Assets)+1)
+	keepAssetIDs = append(keepAssetIDs, dtoWork.ThumbnailAssetID)
+	for _, asset := range dtoWork.Assets {
+		keepAssetIDs = append(keepAssetIDs, asset.ID)
+	}
+	_, err = tx.NewDelete().
+		Model(&dto.Asset{}).
+		Where("work_id = ?", work.ID).
+		Where("id NOT IN (?)", bun.In(keepAssetIDs)).
+		Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
 	thumbnail := &dto.Thumbnail{
 		WorkID:  dtoWork.ID,
 		AssetID: dtoWork.ThumbnailAssetID,
