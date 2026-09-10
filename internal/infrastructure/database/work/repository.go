@@ -180,6 +180,7 @@ func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, incl
 		Relation("User").
 		Relation("Thumbnail.Asset").
 		Relation("Collaborators").
+		Order("created_at DESC").
 		Scan(ctx)
 	if err != nil {
 		return nil, domainerrors.ErrFailedToGetWorksByUserID
