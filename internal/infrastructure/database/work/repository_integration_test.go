@@ -379,7 +379,7 @@ func TestWorkRepository_GetByID_NotFound(t *testing.T) {
 	require.ErrorIs(t, err, domainerrors.ErrWorkNotFound)
 }
 
-func TestWorkRepository_GetByUserID_Public(t *testing.T) {
+func TestWorkRepository_GetByUserID_PublicOnly(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := work.NewWorkRepository(db)
 
@@ -436,8 +436,8 @@ func TestWorkRepository_GetByUserID_Public(t *testing.T) {
 	_, err = repo.Create(ctx, draftWork)
 	require.NoError(t, err)
 
-	// public=trueの場合、公開作品のみ取得
-	works, err := repo.GetByUserID(ctx, user.ID, true)
+	// includePrivate=false, includeDraft=falseの場合、公開作品のみ取得（未認証ユーザー向け）
+	works, err := repo.GetByUserID(ctx, user.ID, false, false)
 	require.NoError(t, err)
 	require.Len(t, works, 2, "公開作品のみ取得される")
 
@@ -449,7 +449,7 @@ func TestWorkRepository_GetByUserID_Public(t *testing.T) {
 	}
 }
 
-func TestWorkRepository_GetByUserID_All(t *testing.T) {
+func TestWorkRepository_GetByUserID_WithPrivate(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := work.NewWorkRepository(db)
 
@@ -493,8 +493,8 @@ func TestWorkRepository_GetByUserID_All(t *testing.T) {
 	_, err = repo.Create(ctx, draftWork)
 	require.NoError(t, err)
 
-	// public=falseの場合、公開・非公開両方取得（下書きは除外）
-	works, err := repo.GetByUserID(ctx, user.ID, false)
+	// includePrivate=true, includeDraft=falseの場合、公開・非公開を取得（認証済みの他人向け、下書きは除外）
+	works, err := repo.GetByUserID(ctx, user.ID, true, false)
 	require.NoError(t, err)
 	require.Len(t, works, 2, "公開・非公開作品が取得される（下書きは除外）")
 
@@ -509,6 +509,66 @@ func TestWorkRepository_GetByUserID_All(t *testing.T) {
 	require.False(t, visibilities["draft"], "下書きは含まれない")
 }
 
+func TestWorkRepository_GetByUserID_WithPrivateAndDraft(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test-tag")
+
+	// 公開作品を1つ作成
+	asset1 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset1 := insertTestAsset(t, db, user.ID)
+	publicWork := newTestWork(user.ID, "public-work")
+	publicWork.Visibility = "public"
+	publicWork.Assets = []*entity.Asset{asset1}
+	publicWork.ThumbnailAssetID = thumbnailAsset1.ID
+	publicWork.TagIDs = []uuid.UUID{tag.ID}
+	publicWork.Tags = []*entity.Tag{tag}
+	_, err := repo.Create(ctx, publicWork)
+	require.NoError(t, err)
+
+	// 非公開作品を1つ作成
+	asset2 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset2 := insertTestAsset(t, db, user.ID)
+	privateWork := newTestWork(user.ID, "private-work")
+	privateWork.Visibility = "private"
+	privateWork.Assets = []*entity.Asset{asset2}
+	privateWork.ThumbnailAssetID = thumbnailAsset2.ID
+	privateWork.TagIDs = []uuid.UUID{tag.ID}
+	privateWork.Tags = []*entity.Tag{tag}
+	_, err = repo.Create(ctx, privateWork)
+	require.NoError(t, err)
+
+	// 下書き作品を1つ作成
+	asset3 := insertTestAsset(t, db, user.ID)
+	thumbnailAsset3 := insertTestAsset(t, db, user.ID)
+	draftWork := newTestWork(user.ID, "draft-work")
+	draftWork.Visibility = "draft"
+	draftWork.Assets = []*entity.Asset{asset3}
+	draftWork.ThumbnailAssetID = thumbnailAsset3.ID
+	draftWork.TagIDs = []uuid.UUID{tag.ID}
+	draftWork.Tags = []*entity.Tag{tag}
+	_, err = repo.Create(ctx, draftWork)
+	require.NoError(t, err)
+
+	// includePrivate=true, includeDraft=trueの場合、公開・非公開・下書き全て取得（本人向け）
+	works, err := repo.GetByUserID(ctx, user.ID, true, true)
+	require.NoError(t, err)
+	require.Len(t, works, 3, "公開・非公開・下書き作品が全て取得される")
+
+	// 取得した作品の可視性を確認
+	visibilities := make(map[string]bool)
+	for _, work := range works {
+		visibilities[work.Visibility] = true
+		require.Equal(t, user.ID, work.UserID, "全ての作品が指定したユーザーのもの")
+	}
+	require.True(t, visibilities["public"], "公開作品が含まれる")
+	require.True(t, visibilities["private"], "非公開作品が含まれる")
+	require.True(t, visibilities["draft"], "下書きが含まれる")
+}
+
 func TestWorkRepository_GetByUserID_Empty(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := work.NewWorkRepository(db)
@@ -517,11 +577,11 @@ func TestWorkRepository_GetByUserID_Empty(t *testing.T) {
 	user := insertTestUser(t, db)
 
 	// 作品を作成しない状態でテスト
-	works, err := repo.GetByUserID(ctx, user.ID, true)
+	works, err := repo.GetByUserID(ctx, user.ID, false, false)
 	require.NoError(t, err)
 	require.Len(t, works, 0, "作品が0件の場合は空のスライスが返される")
 
-	works, err = repo.GetByUserID(ctx, user.ID, false)
+	works, err = repo.GetByUserID(ctx, user.ID, true, true)
 	require.NoError(t, err)
 	require.Len(t, works, 0, "作品が0件の場合は空のスライスが返される")
 }
@@ -560,14 +620,14 @@ func TestWorkRepository_GetByUserID_DifferentUsers(t *testing.T) {
 	require.NoError(t, err)
 
 	// user1の作品のみ取得
-	works, err := repo.GetByUserID(ctx, user1.ID, true)
+	works, err := repo.GetByUserID(ctx, user1.ID, false, false)
 	require.NoError(t, err)
 	require.Len(t, works, 1, "user1の作品のみ取得される")
 	require.Equal(t, user1.ID, works[0].UserID)
 	require.Equal(t, "user1-work", works[0].Title)
 
 	// user2の作品のみ取得
-	works, err = repo.GetByUserID(ctx, user2.ID, true)
+	works, err = repo.GetByUserID(ctx, user2.ID, false, false)
 	require.NoError(t, err)
 	require.Len(t, works, 1, "user2の作品のみ取得される")
 	require.Equal(t, user2.ID, works[0].UserID)
