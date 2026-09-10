@@ -70,14 +70,16 @@ func (uc *workUseCase) GetByID(ctx context.Context, id uuid.UUID) (*entity.Work,
 }
 
 func (uc *workUseCase) GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, error) {
-	var public bool
-	if authenticatedUserID == uuid.Nil {
-		public = true
-	} else {
-		public = false
+	includePrivate := false
+	includeDraft := false
+	if authenticatedUserID != uuid.Nil {
+		includePrivate = true
+		if authenticatedUserID == userID {
+			includeDraft = true
+		}
 	}
 
-	works, err := uc.workRepo.GetByUserID(ctx, userID, public)
+	works, err := uc.workRepo.GetByUserID(ctx, userID, includePrivate, includeDraft)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get works by user ID %s: %w", userID.String(), err)
 	}
