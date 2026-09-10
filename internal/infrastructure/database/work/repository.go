@@ -158,43 +158,33 @@ func (r *WorkRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Wor
 	return dtoWork.ToWorkEntity(), nil
 }
 
-func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, public bool) ([]*entity.Work, error) {
-	var dtoWorks []*dto.Work
-	if public {
-		err := r.db.NewSelect().
-			Model(&dtoWorks).
-			Where("work.user_id = ?", userID).
-			Where("visibility IN (?)", bun.In([]types.Visibility{types.VisibilityPublic})).
-			Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
-			Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)").
-			Relation("Assets").
-			Relation("URLs").
-			Relation("Tags").
-			Relation("User").
-			Relation("Thumbnail.Asset").
-			Relation("Collaborators").
-			Scan(ctx)
-		if err != nil {
-			return nil, domainerrors.ErrFailedToGetWorksByUserID
-		}
-	} else {
-		err := r.db.NewSelect().
-			Model(&dtoWorks).
-			Where("work.user_id = ?", userID).
-			Where("visibility IN (?)", bun.In([]types.Visibility{types.VisibilityPublic, types.VisibilityPrivate})).
-			Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
-			Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)").
-			Relation("Assets").
-			Relation("URLs").
-			Relation("Tags").
-			Relation("User").
-			Relation("Thumbnail.Asset").
-			Relation("Collaborators").
-			Scan(ctx)
-		if err != nil {
-			return nil, domainerrors.ErrFailedToGetWorksByUserID
-		}
+func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, includePrivate bool, includeDraft bool) ([]*entity.Work, error) {
+	visibilities := []types.Visibility{types.VisibilityPublic}
+	if includePrivate {
+		visibilities = append(visibilities, types.VisibilityPrivate)
 	}
+	if includeDraft {
+		visibilities = append(visibilities, types.VisibilityDraft)
+	}
+
+	var dtoWorks []*dto.Work
+	err := r.db.NewSelect().
+		Model(&dtoWorks).
+		Where("work.user_id = ?", userID).
+		Where("visibility IN (?)", bun.In(visibilities)).
+		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
+		Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)").
+		Relation("Assets").
+		Relation("URLs").
+		Relation("Tags").
+		Relation("User").
+		Relation("Thumbnail.Asset").
+		Relation("Collaborators").
+		Scan(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToGetWorksByUserID
+	}
+
 	entityWorks := make([]*entity.Work, len(dtoWorks))
 	for i, dtoWork := range dtoWorks {
 		entityWorks[i] = dtoWork.ToWorkEntity()
