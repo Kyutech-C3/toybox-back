@@ -569,6 +569,42 @@ func TestWorkRepository_GetByUserID_WithPrivateAndDraft(t *testing.T) {
 	require.True(t, visibilities["draft"], "下書きが含まれる")
 }
 
+func TestWorkRepository_GetByUserID_OrderedByCreatedAtDesc(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test-tag")
+
+	titles := []string{"work-1", "work-2", "work-3"}
+	for i, title := range titles {
+		asset := insertTestAsset(t, db, user.ID)
+		thumbnailAsset := insertTestAsset(t, db, user.ID)
+		w := newTestWork(user.ID, title)
+		w.Visibility = "public"
+		w.Assets = []*entity.Asset{asset}
+		w.ThumbnailAssetID = thumbnailAsset.ID
+		w.TagIDs = []uuid.UUID{tag.ID}
+		w.Tags = []*entity.Tag{tag}
+		w.CreatedAt = w.CreatedAt.Add(time.Duration(i) * time.Minute)
+		w.UpdatedAt = w.CreatedAt
+		_, err := repo.Create(ctx, w)
+		require.NoError(t, err)
+	}
+
+	works, err := repo.GetByUserID(ctx, user.ID, false, false)
+	require.NoError(t, err)
+	require.Len(t, works, 3)
+
+	// created_atの降順（新しい順）で返ることを確認
+	require.Equal(t, "work-3", works[0].Title)
+	require.Equal(t, "work-2", works[1].Title)
+	require.Equal(t, "work-1", works[2].Title)
+	require.True(t, works[0].CreatedAt.After(works[1].CreatedAt) || works[0].CreatedAt.Equal(works[1].CreatedAt))
+	require.True(t, works[1].CreatedAt.After(works[2].CreatedAt) || works[1].CreatedAt.Equal(works[2].CreatedAt))
+}
+
 func TestWorkRepository_GetByUserID_Empty(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := work.NewWorkRepository(db)
