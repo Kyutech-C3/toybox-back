@@ -103,7 +103,7 @@ func (r *Router) Setup() *echo.Echo {
 	e.Use(echojwt.WithConfig(config))
 
 	// User
-	e.PUT("/users", r.UserController.UpdateUser)
+	e.PATCH("/users", r.UserController.UpdateUser)
 	e.GET("/users/me", r.UserController.GetCurrentUser)
 
 	// Work
