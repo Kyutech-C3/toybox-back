@@ -73,7 +73,7 @@ func (mr *MockIUserUseCaseMockRecorder) GetByUserID(ctx, id any) *gomock.Call {
 }
 
 // UpdateUser mocks base method.
-func (m *MockIUserUseCase) UpdateUser(ctx context.Context, userID uuid.UUID, displayName, profile, twitterID, githubID string) (*entity.User, error) {
+func (m *MockIUserUseCase) UpdateUser(ctx context.Context, userID uuid.UUID, displayName, profile, twitterID, githubID *string) (*entity.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateUser", ctx, userID, displayName, profile, twitterID, githubID)
 	ret0, _ := ret[0].(*entity.User)
