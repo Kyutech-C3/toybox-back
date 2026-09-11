@@ -229,7 +229,6 @@ func TestUserController_UpdateUser(t *testing.T) {
 	}
 
 	input := schema.UpdateUserInput{
-		Email:       "updated@example.com",
 		DisplayName: "Updated User",
 		Profile:     "Updated profile",
 		TwitterID:   "twitter123",
@@ -255,7 +254,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
+					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
 					Return(mockUser, nil)
 			},
 			wantStatus: http.StatusOK,
@@ -273,7 +272,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
+					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
 					Return(nil, domainerrors.ErrUserNotFound)
 			},
 			wantStatus: http.StatusNotFound,
@@ -284,7 +283,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
+					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
 					Return(nil, domainerrors.ErrFailedToUpdateUser)
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -295,7 +294,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
+					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
 					Return(nil, errors.New("unexpected error"))
 			},
 			wantStatus: http.StatusInternalServerError,

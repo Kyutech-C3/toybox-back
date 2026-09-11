@@ -165,7 +165,6 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 	tests := []struct {
 		name        string
 		userID      uuid.UUID
-		email       string
 		displayName string
 		profile     string
 		twitterID   string
@@ -176,7 +175,6 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 		{
 			name:        "正常系: ユーザー更新成功",
 			userID:      uuid.New(),
-			email:       "updated@example.com",
 			displayName: "Updated User",
 			profile:     "Updated profile",
 			twitterID:   "twitter123",
@@ -206,7 +204,6 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 		{
 			name:        "異常系: ユーザーが見つからない",
 			userID:      uuid.New(),
-			email:       "updated@example.com",
 			displayName: "Updated User",
 			profile:     "Updated profile",
 			twitterID:   "twitter123",
@@ -222,7 +219,6 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 		{
 			name:        "異常系: 更新に失敗",
 			userID:      uuid.New(),
-			email:       "updated@example.com",
 			displayName: "Updated User",
 			profile:     "Updated profile",
 			twitterID:   "twitter123",
@@ -259,7 +255,7 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 
 			uc := usecase.NewUserUseCase(mockRepo)
 
-			got, err := uc.UpdateUser(context.Background(), tt.userID, tt.email, tt.displayName, tt.profile, tt.twitterID, tt.githubID)
+			got, err := uc.UpdateUser(context.Background(), tt.userID, tt.displayName, tt.profile, tt.twitterID, tt.githubID)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -268,7 +264,7 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, tt.userID, got.ID)
-				assert.Equal(t, tt.email, got.Email)
+				assert.Equal(t, "old@example.com", got.Email, "UpdateUserはemailを変更しない")
 				assert.Equal(t, tt.displayName, got.DisplayName)
 				assert.Equal(t, tt.profile, got.Profile)
 				assert.Equal(t, tt.twitterID, got.TwitterID)

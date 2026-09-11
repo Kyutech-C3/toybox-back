@@ -73,16 +73,16 @@ func (mr *MockIUserUseCaseMockRecorder) GetByUserID(ctx, id any) *gomock.Call {
 }
 
 // UpdateUser mocks base method.
-func (m *MockIUserUseCase) UpdateUser(ctx context.Context, userID uuid.UUID, email, displayName, profile, twitterID, githubID string) (*entity.User, error) {
+func (m *MockIUserUseCase) UpdateUser(ctx context.Context, userID uuid.UUID, displayName, profile, twitterID, githubID string) (*entity.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateUser", ctx, userID, email, displayName, profile, twitterID, githubID)
+	ret := m.ctrl.Call(m, "UpdateUser", ctx, userID, displayName, profile, twitterID, githubID)
 	ret0, _ := ret[0].(*entity.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateUser indicates an expected call of UpdateUser.
-func (mr *MockIUserUseCaseMockRecorder) UpdateUser(ctx, userID, email, displayName, profile, twitterID, githubID any) *gomock.Call {
+func (mr *MockIUserUseCaseMockRecorder) UpdateUser(ctx, userID, displayName, profile, twitterID, githubID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockIUserUseCase)(nil).UpdateUser), ctx, userID, email, displayName, profile, twitterID, githubID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockIUserUseCase)(nil).UpdateUser), ctx, userID, displayName, profile, twitterID, githubID)
 }
