@@ -97,16 +97,16 @@ func (uc *UserController) GetCurrentUser(c echo.Context) error {
 
 // UpdateUser godoc
 // @Summary Update a user
-// @Description Update a user
+// @Description Partially update a user
 // @Tags users
 // @Accept json
 // @Produce json
-// @Param user body schema.UpdateUserInput true "User to update"
+// @Param user body schema.UpdateUserInput true "Fields to update"
 // @Success 200 {object} schema.GetUserOutput
 // @Failure 400 {object} echo.HTTPError
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Router /auth/users [put]
+// @Router /auth/users [patch]
 // @Security BearerAuth
 func (uc *UserController) UpdateUser(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
@@ -118,6 +118,9 @@ func (uc *UserController) UpdateUser(c echo.Context) error {
 
 	var input schema.UpdateUserInput
 	if err := c.Bind(&input); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
+	}
+	if err := c.Validate(&input); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
 	}
 
