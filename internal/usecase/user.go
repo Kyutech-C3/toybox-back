@@ -13,7 +13,7 @@ import (
 type IUserUseCase interface {
 	GetAllUser(ctx context.Context) ([]*entity.User, error)
 	GetByUserID(ctx context.Context, id uuid.UUID) (*entity.User, error)
-	UpdateUser(ctx context.Context, userID uuid.UUID, email string, displayName string, profile string, twitterID string, githubID string) (*entity.User, error)
+	UpdateUser(ctx context.Context, userID uuid.UUID, displayName string, profile string, twitterID string, githubID string) (*entity.User, error)
 }
 
 type userUseCase struct {
@@ -38,12 +38,11 @@ func (u *userUseCase) GetByUserID(ctx context.Context, id uuid.UUID) (*entity.Us
 	return user, nil
 }
 
-func (u *userUseCase) UpdateUser(ctx context.Context, userID uuid.UUID, email string, displayName string, profile string, twitterID string, githubID string) (*entity.User, error) {
+func (u *userUseCase) UpdateUser(ctx context.Context, userID uuid.UUID, displayName string, profile string, twitterID string, githubID string) (*entity.User, error) {
 	user, err := u.repo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by ID %s: %w", userID.String(), err)
 	}
-	user.Email = email
 	user.DisplayName = displayName
 	user.Profile = profile
 	user.TwitterID = twitterID

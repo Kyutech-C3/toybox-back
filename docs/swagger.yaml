@@ -168,8 +168,6 @@ definitions:
         type: string
       display_name:
         type: string
-      email:
-        type: string
       github_id:
         type: string
       id:
@@ -256,8 +254,6 @@ definitions:
         maxLength: 32
         minLength: 1
         type: string
-      email:
-        type: string
       github_id:
         type: string
       profile:
@@ -267,7 +263,6 @@ definitions:
         type: string
     required:
     - display_name
-    - email
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput:
     properties:

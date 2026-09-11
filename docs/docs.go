@@ -1310,9 +1310,6 @@ const docTemplate = `{
                 "display_name": {
                     "type": "string"
                 },
-                "email": {
-                    "type": "string"
-                },
                 "github_id": {
                     "type": "string"
                 },
@@ -1439,17 +1436,13 @@ const docTemplate = `{
         "github_com_simesaba80_toybox-back_internal_interface_schema.UpdateUserInput": {
             "type": "object",
             "required": [
-                "display_name",
-                "email"
+                "display_name"
             ],
             "properties": {
                 "display_name": {
                     "type": "string",
                     "maxLength": 32,
                     "minLength": 1
-                },
-                "email": {
-                    "type": "string"
                 },
                 "github_id": {
                     "type": "string"
