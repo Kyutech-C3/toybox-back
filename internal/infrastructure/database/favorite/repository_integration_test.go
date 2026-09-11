@@ -125,6 +125,40 @@ func TestFavoriteRepository_Exists(t *testing.T) {
 	require.False(t, repo.Exists(ctx, otherFav))
 }
 
+func TestFavoriteRepository_FindFavoritedWorkIDs(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := favorite.NewFavoriteRepository(db)
+
+	ctx := context.Background()
+
+	user := insertTestUser(t, db)
+	otherUser := insertTestUser(t, db)
+	favoritedWork := insertTestWork(t, db, user.ID)
+	notFavoritedWork := insertTestWork(t, db, user.ID)
+	otherUsersFavoritedWork := insertTestWork(t, db, user.ID)
+
+	_, err := repo.Create(ctx, entity.NewFavorite(favoritedWork.ID, user.ID))
+	require.NoError(t, err)
+	_, err = repo.Create(ctx, entity.NewFavorite(otherUsersFavoritedWork.ID, otherUser.ID))
+	require.NoError(t, err)
+
+	got, err := repo.FindFavoritedWorkIDs(ctx, user.ID, []uuid.UUID{favoritedWork.ID, notFavoritedWork.ID, otherUsersFavoritedWork.ID})
+	require.NoError(t, err)
+	require.ElementsMatch(t, []uuid.UUID{favoritedWork.ID}, got)
+}
+
+func TestFavoriteRepository_FindFavoritedWorkIDs_EmptyWorkIDs(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := favorite.NewFavoriteRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+
+	got, err := repo.FindFavoritedWorkIDs(ctx, user.ID, []uuid.UUID{})
+	require.NoError(t, err)
+	require.Empty(t, got)
+}
+
 func insertTestUser(t *testing.T, db *bun.DB) *entity.User {
 	t.Helper()
 
