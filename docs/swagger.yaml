@@ -261,8 +261,6 @@ definitions:
         type: string
       twitter_id:
         type: string
-    required:
-    - display_name
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput:
     properties:
@@ -467,12 +465,12 @@ paths:
       tags:
       - tags
   /auth/users:
-    put:
+    patch:
       consumes:
       - application/json
-      description: Update a user
+      description: Partially update a user
       parameters:
-      - description: User to update
+      - description: Fields to update
         in: body
         name: user
         required: true

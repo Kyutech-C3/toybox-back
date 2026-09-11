@@ -198,13 +198,13 @@ const docTemplate = `{
             }
         },
         "/auth/users": {
-            "put": {
+            "patch": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update a user",
+                "description": "Partially update a user",
                 "consumes": [
                     "application/json"
                 ],
@@ -217,7 +217,7 @@ const docTemplate = `{
                 "summary": "Update a user",
                 "parameters": [
                     {
-                        "description": "User to update",
+                        "description": "Fields to update",
                         "name": "user",
                         "in": "body",
                         "required": true,
@@ -1435,9 +1435,6 @@ const docTemplate = `{
         },
         "github_com_simesaba80_toybox-back_internal_interface_schema.UpdateUserInput": {
             "type": "object",
-            "required": [
-                "display_name"
-            ],
             "properties": {
                 "display_name": {
                     "type": "string",
