@@ -10,7 +10,6 @@ import (
 type GetUserOutput struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
-	Email       string    `json:"email"`
 	DisplayName string    `json:"display_name"`
 	Profile     string    `json:"profile"`
 	AvatarURL   string    `json:"avatar_url"`
@@ -31,7 +30,6 @@ type UserListResponse struct {
 }
 
 type UpdateUserInput struct {
-	Email       string `json:"email" validate:"required,email"`
 	DisplayName string `json:"display_name" validate:"required,min=1,max=32"`
 	Profile     string `json:"profile" validate:"omitempty,max=500"`
 	TwitterID   string `json:"twitter_id" validate:"omitempty"`
@@ -45,7 +43,6 @@ func ToUserResponse(user *entity.User) GetUserOutput {
 	return GetUserOutput{
 		ID:          user.ID,
 		Name:        user.Name,
-		Email:       user.Email,
 		DisplayName: user.DisplayName,
 		Profile:     user.Profile,
 		AvatarURL:   user.AvatarURL,
