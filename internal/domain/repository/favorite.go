@@ -12,4 +12,5 @@ type FavoriteRepository interface {
 	Delete(ctx context.Context, favorite *entity.Favorite) error
 	CountByWorkID(ctx context.Context, workID uuid.UUID) (int, error)
 	Exists(ctx context.Context, favorite *entity.Favorite) bool
+	FindFavoritedWorkIDs(ctx context.Context, userID uuid.UUID, workIDs []uuid.UUID) ([]uuid.UUID, error)
 }

@@ -18,19 +18,20 @@ import (
 func TestWorkUseCase_GetAll(t *testing.T) {
 	author := entity.NewUser("test", "test@test.com", "test", "test", "test")
 	tests := []struct {
-		name           string
-		limit          *int
-		page           *int
-		userID         uuid.UUID
-		tagIDs        []uuid.UUID
-		setupWorkMock  func(*mock.MockWorkRepository)
-		setupTagMock   func(*mock.MockTagRepository)
-		setupAssetMock func(*mock.MockAssetRepository)
-		wantCount      int
-		wantTotal      int
-		wantLimit      int
-		wantPage       int
-		wantErr        bool
+		name              string
+		limit             *int
+		page              *int
+		userID            uuid.UUID
+		tagIDs            []uuid.UUID
+		setupWorkMock     func(*mock.MockWorkRepository)
+		setupTagMock      func(*mock.MockTagRepository)
+		setupAssetMock    func(*mock.MockAssetRepository)
+		setupFavoriteMock func(*mock.MockFavoriteRepository)
+		wantCount         int
+		wantTotal         int
+		wantLimit         int
+		wantPage          int
+		wantErr           bool
 	}{
 		{
 			name:   "正常系: デフォルトページネーション",
@@ -245,11 +246,17 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
-			wantCount:      1,
-			wantTotal:      30,
-			wantLimit:      20,
-			wantPage:       2,
-			wantErr:        false,
+			setupFavoriteMock: func(m *mock.MockFavoriteRepository) {
+				m.EXPECT().
+					FindFavoritedWorkIDs(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]uuid.UUID{}, nil).
+					Times(1)
+			},
+			wantCount: 1,
+			wantTotal: 30,
+			wantLimit: 20,
+			wantPage:  2,
+			wantErr:   false,
 		},
 	}
 
@@ -262,14 +269,18 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
+			if tt.setupFavoriteMock != nil {
+				tt.setupFavoriteMock(mockFavoriteRepo)
+			}
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 
-			got, total, limit, page, err := uc.GetAll(context.Background(), tt.limit, tt.page, tt.userID, tt.tagIDs)
+			got, total, limit, page, _, err := uc.GetAll(context.Background(), tt.limit, tt.page, tt.userID, tt.tagIDs)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -342,11 +353,12 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
 			tt.setupWorkMock(mockWorkRepo, tt.workID)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 
 			got, err := uc.GetByID(context.Background(), tt.workID)
 
@@ -375,6 +387,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 		authenticatedUserID uuid.UUID
 		setupMock           func(*mock.MockWorkRepository, uuid.UUID)
 		setupAssetMock      func(*mock.MockAssetRepository)
+		setupFavoriteMock   func(*mock.MockFavoriteRepository)
 		wantCount           int
 		wantErr             bool
 	}{
@@ -382,6 +395,12 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 			name:                "正常系: 認証済み・本人（公開・非公開・下書きを取得）",
 			userID:              targetUserID,
 			authenticatedUserID: targetUserID,
+			setupFavoriteMock: func(m *mock.MockFavoriteRepository) {
+				m.EXPECT().
+					FindFavoritedWorkIDs(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]uuid.UUID{}, nil).
+					Times(1)
+			},
 			setupMock: func(m *mock.MockWorkRepository, userID uuid.UUID) {
 				expectedWorks := []*entity.Work{
 					{
@@ -428,6 +447,12 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 			name:                "正常系: 認証済み・他人（公開・非公開のみ取得、下書きは含まない）",
 			userID:              targetUserID,
 			authenticatedUserID: otherAuthenticatedUserID,
+			setupFavoriteMock: func(m *mock.MockFavoriteRepository) {
+				m.EXPECT().
+					FindFavoritedWorkIDs(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]uuid.UUID{}, nil).
+					Times(1)
+			},
 			setupMock: func(m *mock.MockWorkRepository, userID uuid.UUID) {
 				expectedWorks := []*entity.Work{
 					{
@@ -539,12 +564,16 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
 			tt.setupMock(mockWorkRepo, tt.userID)
 			tt.setupAssetMock(mockAssetRepo)
+			if tt.setupFavoriteMock != nil {
+				tt.setupFavoriteMock(mockFavoriteRepo)
+			}
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 
-			got, err := uc.GetByUserID(context.Background(), tt.userID, tt.authenticatedUserID)
+			got, _, err := uc.GetByUserID(context.Background(), tt.userID, tt.authenticatedUserID)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -756,12 +785,13 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo, tt.tagIDs)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 			got, err := uc.CreateWork(context.Background(), tt.title, tt.description, tt.visibility, tt.thumbnailAssetID, tt.assetIDs, tt.urls, tt.userID, tt.tagIDs, []uuid.UUID{})
 
 			if tt.wantErr {
@@ -942,12 +972,13 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, nil, tt.assetIDs, nil, nil, nil)
 
 			if tt.wantErr {
@@ -1059,11 +1090,12 @@ func TestWorkUseCase_DeleteWork(t *testing.T) {
 			mockTagRepo := mock.NewMockTagRepository(ctrl) // Not used, but included for constructor consistency
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl) // Not used, but included for constructor consistency
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 			err := uc.DeleteWork(context.Background(), tt.workID, tt.userID)
 
 			if tt.wantErr {
@@ -1182,13 +1214,14 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 			tt.setupUserMock(mockUserRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 			got, err := uc.CreateWork(context.Background(), "Title", "Description", "public", uuid.New(), []uuid.UUID{uuid.New()}, []string{"https://example.com"}, userID, []uuid.UUID{tagID}, tt.collaboratorIDs)
 
 			if tt.wantErr {
@@ -1313,13 +1346,14 @@ func TestWorkUseCase_UpdateWork_WithCollaborators(t *testing.T) {
 			mockTagRepo := mock.NewMockTagRepository(ctrl)
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 			tt.setupUserMock(mockUserRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 			got, err := uc.UpdateWork(context.Background(), workID, userID, nil, nil, nil, nil, nil, nil, nil, tt.collaboratorIDs)
 
 			if tt.wantErr {

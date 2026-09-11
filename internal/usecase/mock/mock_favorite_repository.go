@@ -99,3 +99,18 @@ func (mr *MockFavoriteRepositoryMockRecorder) Exists(ctx, favorite any) *gomock.
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockFavoriteRepository)(nil).Exists), ctx, favorite)
 }
+
+// FindFavoritedWorkIDs mocks base method.
+func (m *MockFavoriteRepository) FindFavoritedWorkIDs(ctx context.Context, userID uuid.UUID, workIDs []uuid.UUID) ([]uuid.UUID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindFavoritedWorkIDs", ctx, userID, workIDs)
+	ret0, _ := ret[0].([]uuid.UUID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindFavoritedWorkIDs indicates an expected call of FindFavoritedWorkIDs.
+func (mr *MockFavoriteRepositoryMockRecorder) FindFavoritedWorkIDs(ctx, userID, workIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindFavoritedWorkIDs", reflect.TypeOf((*MockFavoriteRepository)(nil).FindFavoritedWorkIDs), ctx, userID, workIDs)
+}

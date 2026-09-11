@@ -25,6 +25,7 @@ type GetWorkOutput struct {
 	URLs             []string               `json:"urls"`
 	Tags             []TagResponse          `json:"tags"`
 	Collaborators    []CollaboratorResponse `json:"collaborators"`
+	IsFavorite       bool                   `json:"is_favorite"`
 	CreatedAt        string                 `json:"created_at"`
 	UpdatedAt        string                 `json:"updated_at"`
 }

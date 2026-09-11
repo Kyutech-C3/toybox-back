@@ -43,7 +43,8 @@ func InitializeApp() (*App, func(), error) {
 	tagRepository := tag.NewTagRepository(db)
 	client := ProvideS3Client()
 	assetRepository := asset.NewAssetRepository(db, client)
-	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository, assetRepository, userRepository)
+	favoriteRepository := favorite.NewFavoriteRepository(db)
+	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository, assetRepository, userRepository, favoriteRepository)
 	workController := controller.NewWorkController(iWorkUseCase)
 	commentRepository := comment.NewCommentRepository(db)
 	iCommentUsecase := ProvideCommentUseCase(commentRepository, workRepository)
@@ -55,7 +56,6 @@ func InitializeApp() (*App, func(), error) {
 	authController := controller.NewAuthController(iAuthUsecase)
 	iAssetUseCase := ProvideAssetUseCase(assetRepository)
 	assetController := controller.NewAssetController(iAssetUseCase)
-	favoriteRepository := favorite.NewFavoriteRepository(db)
 	iFavoriteUsecase := ProvideFavoriteUseCase(favoriteRepository)
 	favoriteController := controller.NewFavoriteController(iFavoriteUsecase)
 	iTagUseCase := ProvideTagUseCase(tagRepository)
@@ -114,8 +114,8 @@ func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します
-func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository) usecase.IWorkUseCase {
-	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo, userRepo)
+func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository) usecase.IWorkUseCase {
+	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo, userRepo, favoriteRepo)
 }
 
 // ProvideCommentUseCase はCommentUseCaseを提供します

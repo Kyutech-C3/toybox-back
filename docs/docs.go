@@ -1354,6 +1354,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_favorite": {
+                    "type": "boolean"
+                },
                 "tags": {
                     "type": "array",
                     "items": {
