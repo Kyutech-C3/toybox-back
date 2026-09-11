@@ -77,14 +77,16 @@ func (wc *WorkController) GetAllWorks(c echo.Context) error {
 		}
 	}
 
-	works, total, limit, page, err := wc.workUsecase.GetAll(c.Request().Context(), query.Limit, query.Page, userID, tagIDs)
+	works, total, limit, page, favoritedWorkIDs, err := wc.workUsecase.GetAll(c.Request().Context(), query.Limit, query.Page, userID, tagIDs)
 	if err != nil {
 		return handleWorkError(c, err)
 	}
 
 	response := make([]schema.GetWorkOutput, len(works))
 	for i, work := range works {
-		response[i] = schema.ToWorkResponse(work)
+		output := schema.ToWorkResponse(work)
+		output.IsFavorite = favoritedWorkIDs[work.ID]
+		response[i] = output
 	}
 
 	return c.JSON(http.StatusOK, schema.WorkListResponse{
@@ -155,11 +157,17 @@ func (wc *WorkController) GetWorksByUserID(c echo.Context) error {
 	if err != nil {
 		return handleWorkError(c, domainerrors.ErrInvalidRequestBody)
 	}
-	works, err := wc.workUsecase.GetByUserID(c.Request().Context(), userID, authenticatedUserID)
+	works, favoritedWorkIDs, err := wc.workUsecase.GetByUserID(c.Request().Context(), userID, authenticatedUserID)
 	if err != nil {
 		return handleWorkError(c, err)
 	}
-	return c.JSON(http.StatusOK, schema.ToWorkListResponse(works))
+
+	workListResponse := schema.ToWorkListResponse(works)
+	for i := range workListResponse.Works {
+		output := &workListResponse.Works[i]
+		output.IsFavorite = favoritedWorkIDs[output.ID]
+	}
+	return c.JSON(http.StatusOK, workListResponse)
 }
 
 // CreateWork godoc

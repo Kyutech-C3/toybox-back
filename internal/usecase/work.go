@@ -12,31 +12,55 @@ import (
 )
 
 type IWorkUseCase interface {
-	GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, error)
+	GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error)
-	GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, map[uuid.UUID]bool, error)
 	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error)
 	UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID, collaboratorIDs *[]uuid.UUID) (*entity.Work, error)
 	DeleteWork(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
 
 type workUseCase struct {
-	workRepo  repository.WorkRepository
-	tagRepo   repository.TagRepository
-	assetRepo repository.AssetRepository
-	userRepo  repository.UserRepository
+	workRepo     repository.WorkRepository
+	tagRepo      repository.TagRepository
+	assetRepo    repository.AssetRepository
+	userRepo     repository.UserRepository
+	favoriteRepo repository.FavoriteRepository
 }
 
-func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository) IWorkUseCase {
+func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository) IWorkUseCase {
 	return &workUseCase{
-		workRepo:  workRepo,
-		tagRepo:   tagRepo,
-		assetRepo: assetRepo,
-		userRepo:  userRepo,
+		workRepo:     workRepo,
+		tagRepo:      tagRepo,
+		assetRepo:    assetRepo,
+		userRepo:     userRepo,
+		favoriteRepo: favoriteRepo,
 	}
 }
 
-func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, error) {
+func (uc *workUseCase) favoritedWorkIDs(ctx context.Context, viewerID uuid.UUID, works []*entity.Work) (map[uuid.UUID]bool, error) {
+	if viewerID == uuid.Nil || len(works) == 0 {
+		return map[uuid.UUID]bool{}, nil
+	}
+
+	workIDs := make([]uuid.UUID, len(works))
+	for i, work := range works {
+		workIDs[i] = work.ID
+	}
+
+	favoritedIDs, err := uc.favoriteRepo.FindFavoritedWorkIDs(ctx, viewerID, workIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find favorited work ids: %w", err)
+	}
+
+	favoritedSet := make(map[uuid.UUID]bool, len(favoritedIDs))
+	for _, workID := range favoritedIDs {
+		favoritedSet[workID] = true
+	}
+	return favoritedSet, nil
+}
+
+func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error) {
 	actualLimit := 20
 	actualPage := 1
 	if limit != nil {
@@ -49,16 +73,24 @@ func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid
 	if userID == uuid.Nil {
 		works, total, err := uc.workRepo.GetAllPublic(ctx, actualLimit, offset, tagIDs)
 		if err != nil {
-			return nil, 0, 0, 0, fmt.Errorf("failed to get all works by user ID %s: %w", userID.String(), err)
+			return nil, 0, 0, 0, nil, fmt.Errorf("failed to get all works by user ID %s: %w", userID.String(), err)
 		}
-		return works, total, actualLimit, actualPage, nil
+		favoritedWorkIDs, err := uc.favoritedWorkIDs(ctx, userID, works)
+		if err != nil {
+			return nil, 0, 0, 0, nil, err
+		}
+		return works, total, actualLimit, actualPage, favoritedWorkIDs, nil
 	}
 
 	works, total, err := uc.workRepo.GetAll(ctx, actualLimit, offset, tagIDs)
 	if err != nil {
-		return nil, 0, 0, 0, fmt.Errorf("failed to get all works: %w", err)
+		return nil, 0, 0, 0, nil, fmt.Errorf("failed to get all works: %w", err)
 	}
-	return works, total, actualLimit, actualPage, nil
+	favoritedWorkIDs, err := uc.favoritedWorkIDs(ctx, userID, works)
+	if err != nil {
+		return nil, 0, 0, 0, nil, err
+	}
+	return works, total, actualLimit, actualPage, favoritedWorkIDs, nil
 }
 
 func (uc *workUseCase) GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
@@ -69,7 +101,7 @@ func (uc *workUseCase) GetByID(ctx context.Context, id uuid.UUID) (*entity.Work,
 	return work, nil
 }
 
-func (uc *workUseCase) GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, error) {
+func (uc *workUseCase) GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, map[uuid.UUID]bool, error) {
 	includePrivate := false
 	includeDraft := false
 	if authenticatedUserID != uuid.Nil {
@@ -81,9 +113,13 @@ func (uc *workUseCase) GetByUserID(ctx context.Context, userID uuid.UUID, authen
 
 	works, err := uc.workRepo.GetByUserID(ctx, userID, includePrivate, includeDraft)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get works by user ID %s: %w", userID.String(), err)
+		return nil, nil, fmt.Errorf("failed to get works by user ID %s: %w", userID.String(), err)
 	}
-	return works, nil
+	favoritedWorkIDs, err := uc.favoritedWorkIDs(ctx, authenticatedUserID, works)
+	if err != nil {
+		return nil, nil, err
+	}
+	return works, favoritedWorkIDs, nil
 }
 
 func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error) {

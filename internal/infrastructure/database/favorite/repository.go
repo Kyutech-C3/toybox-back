@@ -54,3 +54,21 @@ func (r *FavoriteRepository) Exists(ctx context.Context, favorite *entity.Favori
 	}
 	return exists
 }
+
+func (r *FavoriteRepository) FindFavoritedWorkIDs(ctx context.Context, userID uuid.UUID, workIDs []uuid.UUID) ([]uuid.UUID, error) {
+	if len(workIDs) == 0 {
+		return []uuid.UUID{}, nil
+	}
+
+	var favorites []dto.Favorite
+	err := r.db.NewSelect().Model(&favorites).Column("work_id").Where("user_id = ? AND work_id IN (?)", userID, bun.In(workIDs)).Scan(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToFindFavoritedWorkIDs
+	}
+
+	workIDsResult := make([]uuid.UUID, 0, len(favorites))
+	for _, favorite := range favorites {
+		workIDsResult = append(workIDsResult, favorite.WorkID)
+	}
+	return workIDsResult, nil
+}
