@@ -158,7 +158,7 @@ func (r *WorkRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Wor
 	return dtoWork.ToWorkEntity(), nil
 }
 
-func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, includePrivate bool, includeDraft bool) ([]*entity.Work, error) {
+func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, includePrivate bool, includeDraft bool, limit, offset int) ([]*entity.Work, int, error) {
 	visibilities := []types.Visibility{types.VisibilityPublic}
 	if includePrivate {
 		visibilities = append(visibilities, types.VisibilityPrivate)
@@ -168,7 +168,20 @@ func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, incl
 	}
 
 	var dtoWorks []*dto.Work
-	err := r.db.NewSelect().
+
+	countQuery := r.db.NewSelect().
+		Model(&dtoWorks).
+		Where("work.user_id = ?", userID).
+		Where("visibility IN (?)", bun.In(visibilities)).
+		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
+		Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)")
+
+	total, err := countQuery.Count(ctx)
+	if err != nil {
+		return nil, 0, domainerrors.ErrFailedToGetWorksByUserID
+	}
+
+	err = r.db.NewSelect().
 		Model(&dtoWorks).
 		Where("work.user_id = ?", userID).
 		Where("visibility IN (?)", bun.In(visibilities)).
@@ -181,16 +194,18 @@ func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, incl
 		Relation("Thumbnail.Asset").
 		Relation("Collaborators").
 		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
 		Scan(ctx)
 	if err != nil {
-		return nil, domainerrors.ErrFailedToGetWorksByUserID
+		return nil, 0, domainerrors.ErrFailedToGetWorksByUserID
 	}
 
 	entityWorks := make([]*entity.Work, len(dtoWorks))
 	for i, dtoWork := range dtoWorks {
 		entityWorks[i] = dtoWork.ToWorkEntity()
 	}
-	return entityWorks, nil
+	return entityWorks, total, nil
 }
 
 func (r *WorkRepository) ExistsById(ctx context.Context, id uuid.UUID) (bool, error) {

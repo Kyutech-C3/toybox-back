@@ -68,6 +68,11 @@ type GetWorksQuery struct {
 	TagIDs string `query:"tag_ids" validate:"omitempty"`
 }
 
+type GetWorksByUserQuery struct {
+	Limit *int `query:"limit" validate:"omitempty,min=1,max=100"`
+	Page  *int `query:"page" validate:"omitempty,min=1"`
+}
+
 type WorkListResponse struct {
 	Works      []GetWorkOutput `json:"works"`
 	TotalCount int             `json:"total_count"`
@@ -225,19 +230,4 @@ func ToCollaboratorResponses(users []*entity.User) []CollaboratorResponse {
 		res = append(res, ToCollaboratorResponse(user))
 	}
 	return res
-}
-func ToWorkListResponse(works []*entity.Work) WorkListResponse {
-	if len(works) == 0 {
-		return WorkListResponse{}
-	}
-	workResponses := make([]GetWorkOutput, 0, len(works))
-	for _, work := range works {
-		workResponses = append(workResponses, ToWorkResponse(work))
-	}
-	return WorkListResponse{
-		Works:      workResponses,
-		TotalCount: len(works),
-		Page:       1,
-		Limit:      20,
-	}
 }

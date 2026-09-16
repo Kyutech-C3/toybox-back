@@ -383,16 +383,23 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 
 	tests := []struct {
 		name                string
+		limit               *int
+		page                *int
 		userID              uuid.UUID
 		authenticatedUserID uuid.UUID
 		setupMock           func(*mock.MockWorkRepository, uuid.UUID)
 		setupAssetMock      func(*mock.MockAssetRepository)
 		setupFavoriteMock   func(*mock.MockFavoriteRepository)
 		wantCount           int
+		wantTotal           int
+		wantLimit           int
+		wantPage            int
 		wantErr             bool
 	}{
 		{
 			name:                "正常系: 認証済み・本人（公開・非公開・下書きを取得）",
+			limit:               nil,
+			page:                nil,
 			userID:              targetUserID,
 			authenticatedUserID: targetUserID,
 			setupFavoriteMock: func(m *mock.MockFavoriteRepository) {
@@ -435,16 +442,21 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 					},
 				}
 				m.EXPECT().
-					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(true), gomock.Eq(true)).
-					Return(expectedWorks, nil).
+					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(true), gomock.Eq(true), gomock.Eq(20), gomock.Eq(0)).
+					Return(expectedWorks, 3, nil).
 					Times(1)
 			},
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
 			wantCount:      3,
+			wantTotal:      3,
+			wantLimit:      20,
+			wantPage:       1,
 			wantErr:        false,
 		},
 		{
 			name:                "正常系: 認証済み・他人（公開・非公開のみ取得、下書きは含まない）",
+			limit:               nil,
+			page:                nil,
 			userID:              targetUserID,
 			authenticatedUserID: otherAuthenticatedUserID,
 			setupFavoriteMock: func(m *mock.MockFavoriteRepository) {
@@ -477,16 +489,21 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 					},
 				}
 				m.EXPECT().
-					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(true), gomock.Eq(false)).
-					Return(expectedWorks, nil).
+					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(true), gomock.Eq(false), gomock.Eq(20), gomock.Eq(0)).
+					Return(expectedWorks, 2, nil).
 					Times(1)
 			},
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
 			wantCount:      2,
+			wantTotal:      2,
+			wantLimit:      20,
+			wantPage:       1,
 			wantErr:        false,
 		},
 		{
 			name:                "正常系: 未認証ユーザー（公開作品のみ取得）",
+			limit:               nil,
+			page:                nil,
 			userID:              targetUserID,
 			authenticatedUserID: uuid.Nil,
 			setupMock: func(m *mock.MockWorkRepository, userID uuid.UUID) {
@@ -503,36 +520,77 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 					},
 				}
 				m.EXPECT().
-					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(false), gomock.Eq(false)).
-					Return(expectedWorks, nil).
+					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(false), gomock.Eq(false), gomock.Eq(20), gomock.Eq(0)).
+					Return(expectedWorks, 1, nil).
 					Times(1)
 			},
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
 			wantCount:      1,
+			wantTotal:      1,
+			wantLimit:      20,
+			wantPage:       1,
+			wantErr:        false,
+		},
+		{
+			name:                "正常系: カスタムページネーション(limit=10, page=2)",
+			limit:               IntPtr(10),
+			page:                IntPtr(2),
+			userID:              targetUserID,
+			authenticatedUserID: uuid.Nil,
+			setupMock: func(m *mock.MockWorkRepository, userID uuid.UUID) {
+				expectedWorks := []*entity.Work{
+					{
+						ID:          uuid.New(),
+						Title:       "Public Work",
+						Description: "Public Description",
+						UserID:      userID,
+						User:        author,
+						Visibility:  "public",
+						CreatedAt:   time.Now(),
+						UpdatedAt:   time.Now(),
+					},
+				}
+				m.EXPECT().
+					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(false), gomock.Eq(false), gomock.Eq(10), gomock.Eq(10)).
+					Return(expectedWorks, 15, nil).
+					Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			wantCount:      1,
+			wantTotal:      15,
+			wantLimit:      10,
+			wantPage:       2,
 			wantErr:        false,
 		},
 		{
 			name:                "正常系: 作品が0件",
+			limit:               nil,
+			page:                nil,
 			userID:              targetUserID,
 			authenticatedUserID: uuid.Nil,
 			setupMock: func(m *mock.MockWorkRepository, userID uuid.UUID) {
 				m.EXPECT().
-					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(false), gomock.Eq(false)).
-					Return([]*entity.Work{}, nil).
+					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(false), gomock.Eq(false), gomock.Eq(20), gomock.Eq(0)).
+					Return([]*entity.Work{}, 0, nil).
 					Times(1)
 			},
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
 			wantCount:      0,
+			wantTotal:      0,
+			wantLimit:      20,
+			wantPage:       1,
 			wantErr:        false,
 		},
 		{
 			name:                "異常系: リポジトリエラー（本人）",
+			limit:               nil,
+			page:                nil,
 			userID:              targetUserID,
 			authenticatedUserID: targetUserID,
 			setupMock: func(m *mock.MockWorkRepository, userID uuid.UUID) {
 				m.EXPECT().
-					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(true), gomock.Eq(true)).
-					Return(nil, errors.New("database connection failed")).
+					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(true), gomock.Eq(true), gomock.Eq(20), gomock.Eq(0)).
+					Return(nil, 0, errors.New("database connection failed")).
 					Times(1)
 			},
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
@@ -541,12 +599,14 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 		},
 		{
 			name:                "異常系: リポジトリエラー（未認証）",
+			limit:               nil,
+			page:                nil,
 			userID:              targetUserID,
 			authenticatedUserID: uuid.Nil,
 			setupMock: func(m *mock.MockWorkRepository, userID uuid.UUID) {
 				m.EXPECT().
-					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(false), gomock.Eq(false)).
-					Return(nil, errors.New("database connection failed")).
+					GetByUserID(gomock.Any(), gomock.Eq(userID), gomock.Eq(false), gomock.Eq(false), gomock.Eq(20), gomock.Eq(0)).
+					Return(nil, 0, errors.New("database connection failed")).
 					Times(1)
 			},
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
@@ -573,7 +633,7 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 
 			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 
-			got, _, err := uc.GetByUserID(context.Background(), tt.userID, tt.authenticatedUserID)
+			got, total, limit, page, _, err := uc.GetByUserID(context.Background(), tt.limit, tt.page, tt.userID, tt.authenticatedUserID)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -582,6 +642,9 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Len(t, got, tt.wantCount)
+				assert.Equal(t, tt.wantTotal, total)
+				assert.Equal(t, tt.wantLimit, limit)
+				assert.Equal(t, tt.wantPage, page)
 				if tt.wantCount > 0 {
 					for _, work := range got {
 						assert.Equal(t, tt.userID, work.UserID)
