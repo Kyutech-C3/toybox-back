@@ -1002,6 +1002,14 @@ paths:
         name: user_id
         required: true
         type: string
+      - description: 'Limit per page (default: 20, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
       produces:
       - application/json
       responses:
