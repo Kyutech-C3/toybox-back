@@ -14,7 +14,7 @@ import (
 type IWorkUseCase interface {
 	GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error)
-	GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, map[uuid.UUID]bool, error)
+	GetByUserID(ctx context.Context, limit, page *int, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
 	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error)
 	UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID, collaboratorIDs *[]uuid.UUID) (*entity.Work, error)
 	DeleteWork(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
@@ -101,7 +101,17 @@ func (uc *workUseCase) GetByID(ctx context.Context, id uuid.UUID) (*entity.Work,
 	return work, nil
 }
 
-func (uc *workUseCase) GetByUserID(ctx context.Context, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, map[uuid.UUID]bool, error) {
+func (uc *workUseCase) GetByUserID(ctx context.Context, limit, page *int, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error) {
+	actualLimit := 20
+	actualPage := 1
+	if limit != nil {
+		actualLimit = *limit
+	}
+	if page != nil {
+		actualPage = *page
+	}
+	offset := (actualPage - 1) * actualLimit
+
 	includePrivate := false
 	includeDraft := false
 	if authenticatedUserID != uuid.Nil {
@@ -111,15 +121,15 @@ func (uc *workUseCase) GetByUserID(ctx context.Context, userID uuid.UUID, authen
 		}
 	}
 
-	works, err := uc.workRepo.GetByUserID(ctx, userID, includePrivate, includeDraft)
+	works, total, err := uc.workRepo.GetByUserID(ctx, userID, includePrivate, includeDraft, actualLimit, offset)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get works by user ID %s: %w", userID.String(), err)
+		return nil, 0, 0, 0, nil, fmt.Errorf("failed to get works by user ID %s: %w", userID.String(), err)
 	}
 	favoritedWorkIDs, err := uc.favoritedWorkIDs(ctx, authenticatedUserID, works)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, 0, 0, nil, err
 	}
-	return works, favoritedWorkIDs, nil
+	return works, total, actualLimit, actualPage, favoritedWorkIDs, nil
 }
 
 func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error) {
