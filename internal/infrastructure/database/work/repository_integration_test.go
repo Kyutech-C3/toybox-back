@@ -437,9 +437,10 @@ func TestWorkRepository_GetByUserID_PublicOnly(t *testing.T) {
 	require.NoError(t, err)
 
 	// includePrivate=false, includeDraft=falseの場合、公開作品のみ取得（未認証ユーザー向け）
-	works, err := repo.GetByUserID(ctx, user.ID, false, false)
+	works, total, err := repo.GetByUserID(ctx, user.ID, false, false, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, works, 2, "公開作品のみ取得される")
+	require.Equal(t, 2, total, "総件数は公開作品数と一致する")
 
 	// 全ての取得した作品が公開であることを確認
 	for _, work := range works {
@@ -494,9 +495,10 @@ func TestWorkRepository_GetByUserID_WithPrivate(t *testing.T) {
 	require.NoError(t, err)
 
 	// includePrivate=true, includeDraft=falseの場合、公開・非公開を取得（認証済みの他人向け、下書きは除外）
-	works, err := repo.GetByUserID(ctx, user.ID, true, false)
+	works, total, err := repo.GetByUserID(ctx, user.ID, true, false, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, works, 2, "公開・非公開作品が取得される（下書きは除外）")
+	require.Equal(t, 2, total, "総件数は公開・非公開作品数と一致する")
 
 	// 取得した作品の可視性を確認
 	visibilities := make(map[string]bool)
@@ -554,9 +556,10 @@ func TestWorkRepository_GetByUserID_WithPrivateAndDraft(t *testing.T) {
 	require.NoError(t, err)
 
 	// includePrivate=true, includeDraft=trueの場合、公開・非公開・下書き全て取得（本人向け）
-	works, err := repo.GetByUserID(ctx, user.ID, true, true)
+	works, total, err := repo.GetByUserID(ctx, user.ID, true, true, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, works, 3, "公開・非公開・下書き作品が全て取得される")
+	require.Equal(t, 3, total, "総件数は全作品数と一致する")
 
 	// 取得した作品の可視性を確認
 	visibilities := make(map[string]bool)
@@ -593,7 +596,7 @@ func TestWorkRepository_GetByUserID_OrderedByCreatedAtDesc(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	works, err := repo.GetByUserID(ctx, user.ID, false, false)
+	works, _, err := repo.GetByUserID(ctx, user.ID, false, false, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, works, 3)
 
@@ -613,13 +616,58 @@ func TestWorkRepository_GetByUserID_Empty(t *testing.T) {
 	user := insertTestUser(t, db)
 
 	// 作品を作成しない状態でテスト
-	works, err := repo.GetByUserID(ctx, user.ID, false, false)
+	works, total, err := repo.GetByUserID(ctx, user.ID, false, false, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, works, 0, "作品が0件の場合は空のスライスが返される")
+	require.Equal(t, 0, total)
 
-	works, err = repo.GetByUserID(ctx, user.ID, true, true)
+	works, total, err = repo.GetByUserID(ctx, user.ID, true, true, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, works, 0, "作品が0件の場合は空のスライスが返される")
+	require.Equal(t, 0, total)
+}
+
+func TestWorkRepository_GetByUserID_Pagination(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+	tag := insertTestTag(t, db, "test-tag")
+
+	// 公開作品を5つ作成
+	for i := 0; i < 5; i++ {
+		asset := insertTestAsset(t, db, user.ID)
+		thumbnailAsset := insertTestAsset(t, db, user.ID)
+		w := newTestWork(user.ID, "public-title-"+uuid.NewString())
+		w.Visibility = "public"
+		w.Assets = []*entity.Asset{asset}
+		w.ThumbnailAssetID = thumbnailAsset.ID
+		w.TagIDs = []uuid.UUID{tag.ID}
+		w.Tags = []*entity.Tag{tag}
+		w.CreatedAt = w.CreatedAt.Add(time.Duration(i) * time.Minute)
+		w.UpdatedAt = w.CreatedAt
+		_, err := repo.Create(ctx, w)
+		require.NoError(t, err)
+	}
+
+	// ページネーション: limit=2, offset=0
+	works, total, err := repo.GetByUserID(ctx, user.ID, false, false, 2, 0)
+	require.NoError(t, err)
+	require.Equal(t, 5, total, "全体の公開作品数は5")
+	require.Len(t, works, 2, "limit=2なので2件取得")
+
+	// ページネーション: limit=2, offset=2
+	works, total, err = repo.GetByUserID(ctx, user.ID, false, false, 2, 2)
+	require.NoError(t, err)
+	require.Equal(t, 5, total, "全体の公開作品数は5")
+	require.Len(t, works, 2, "limit=2なので2件取得")
+
+	// ページネーション: limit=2, offset=4
+	works, total, err = repo.GetByUserID(ctx, user.ID, false, false, 2, 4)
+	require.NoError(t, err)
+	require.Equal(t, 5, total, "全体の公開作品数は5")
+	require.Len(t, works, 1, "残り1件のみ取得")
 }
 
 func TestWorkRepository_GetByUserID_DifferentUsers(t *testing.T) {
@@ -656,16 +704,18 @@ func TestWorkRepository_GetByUserID_DifferentUsers(t *testing.T) {
 	require.NoError(t, err)
 
 	// user1の作品のみ取得
-	works, err := repo.GetByUserID(ctx, user1.ID, false, false)
+	works, total, err := repo.GetByUserID(ctx, user1.ID, false, false, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, works, 1, "user1の作品のみ取得される")
+	require.Equal(t, 1, total)
 	require.Equal(t, user1.ID, works[0].UserID)
 	require.Equal(t, "user1-work", works[0].Title)
 
 	// user2の作品のみ取得
-	works, err = repo.GetByUserID(ctx, user2.ID, false, false)
+	works, total, err = repo.GetByUserID(ctx, user2.ID, false, false, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, works, 1, "user2の作品のみ取得される")
+	require.Equal(t, 1, total)
 	require.Equal(t, user2.ID, works[0].UserID)
 	require.Equal(t, "user2-work", works[0].Title)
 }

@@ -265,64 +265,79 @@ func TestWorkController_GetWorksByUserID(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	successResponseWithBothWorks, _ := json.Marshal(schema.ToWorkListResponse([]*entity.Work{mockWork1, mockWork2}))
-	successResponseWithPublicOnly, _ := json.Marshal(schema.ToWorkListResponse([]*entity.Work{mockWork1}))
+	successResponseWithBothWorks, _ := json.Marshal(schema.WorkListResponse{
+		Works:      []schema.GetWorkOutput{schema.ToWorkResponse(mockWork1), schema.ToWorkResponse(mockWork2)},
+		TotalCount: 2,
+		Page:       1,
+		Limit:      20,
+	})
+	successResponseWithPublicOnly, _ := json.Marshal(schema.WorkListResponse{
+		Works:      []schema.GetWorkOutput{schema.ToWorkResponse(mockWork1)},
+		TotalCount: 1,
+		Page:       1,
+		Limit:      20,
+	})
 	badRequestResponseBytes, _ := json.Marshal(map[string]string{"message": "無効なリクエストボディです"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
 
 	tests := []struct {
-		name       string
-		userID     string
-		withAuth   bool
-		authUserID uuid.UUID
-		setupMock  func(mockWorkUsecase *mock.MockIWorkUseCase)
-		wantStatus int
-		wantBody   []byte
+		name        string
+		userID      string
+		queryParams string
+		withAuth    bool
+		authUserID  uuid.UUID
+		setupMock   func(mockWorkUsecase *mock.MockIWorkUseCase)
+		wantStatus  int
+		wantBody    []byte
 	}{
 		{
-			name:       "正常系: 認証あり",
-			userID:     targetUserID.String(),
-			withAuth:   true,
-			authUserID: authenticatedUserID,
+			name:        "正常系: 認証あり",
+			userID:      targetUserID.String(),
+			queryParams: "?limit=20&page=1",
+			withAuth:    true,
+			authUserID:  authenticatedUserID,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					GetByUserID(gomock.Any(), targetUserID, authenticatedUserID).
-					Return([]*entity.Work{mockWork1, mockWork2}, map[uuid.UUID]bool{}, nil)
+					GetByUserID(gomock.Any(), IntPtr(20), IntPtr(1), targetUserID, authenticatedUserID).
+					Return([]*entity.Work{mockWork1, mockWork2}, 2, 20, 1, map[uuid.UUID]bool{}, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseWithBothWorks,
 		},
 		{
-			name:       "正常系: 認証なし（公開作品のみ）",
-			userID:     targetUserID.String(),
-			withAuth:   false,
-			authUserID: uuid.Nil,
+			name:        "正常系: 認証なし（公開作品のみ）",
+			userID:      targetUserID.String(),
+			queryParams: "",
+			withAuth:    false,
+			authUserID:  uuid.Nil,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					GetByUserID(gomock.Any(), targetUserID, uuid.Nil).
-					Return([]*entity.Work{mockWork1}, map[uuid.UUID]bool{}, nil)
+					GetByUserID(gomock.Any(), nil, nil, targetUserID, uuid.Nil).
+					Return([]*entity.Work{mockWork1}, 1, 20, 1, map[uuid.UUID]bool{}, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseWithPublicOnly,
 		},
 		{
-			name:       "異常系: user_idが不正",
-			userID:     "invalid-uuid",
-			withAuth:   false,
-			authUserID: uuid.Nil,
-			setupMock:  func(mockWorkUsecase *mock.MockIWorkUseCase) {},
-			wantStatus: http.StatusBadRequest,
-			wantBody:   badRequestResponseBytes,
+			name:        "異常系: user_idが不正",
+			userID:      "invalid-uuid",
+			queryParams: "",
+			withAuth:    false,
+			authUserID:  uuid.Nil,
+			setupMock:   func(mockWorkUsecase *mock.MockIWorkUseCase) {},
+			wantStatus:  http.StatusBadRequest,
+			wantBody:    badRequestResponseBytes,
 		},
 		{
-			name:       "異常系: Usecaseエラー",
-			userID:     targetUserID.String(),
-			withAuth:   false,
-			authUserID: uuid.Nil,
+			name:        "異常系: Usecaseエラー",
+			userID:      targetUserID.String(),
+			queryParams: "",
+			withAuth:    false,
+			authUserID:  uuid.Nil,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					GetByUserID(gomock.Any(), targetUserID, uuid.Nil).
-					Return(nil, nil, errors.New("some error"))
+					GetByUserID(gomock.Any(), nil, nil, targetUserID, uuid.Nil).
+					Return(nil, 0, 0, 0, nil, errors.New("some error"))
 			},
 			wantStatus: http.StatusInternalServerError,
 			wantBody:   internalErrorResponseBytes,
@@ -332,6 +347,7 @@ func TestWorkController_GetWorksByUserID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := echo.New()
+			e.Validator = echovalidator.NewValidator()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -349,7 +365,7 @@ func TestWorkController_GetWorksByUserID(t *testing.T) {
 				return workController.GetWorksByUserID(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, "/works/"+tt.userID, nil)
+			req := httptest.NewRequest(http.MethodGet, "/works/"+tt.userID+tt.queryParams, nil)
 			rec := httptest.NewRecorder()
 
 			e.ServeHTTP(rec, req)

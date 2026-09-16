@@ -134,18 +134,19 @@ func (mr *MockWorkRepositoryMockRecorder) GetByID(ctx, id any) *gomock.Call {
 }
 
 // GetByUserID mocks base method.
-func (m *MockWorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, includePrivate, includeDraft bool) ([]*entity.Work, error) {
+func (m *MockWorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, includePrivate, includeDraft bool, limit, offset int) ([]*entity.Work, int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByUserID", ctx, userID, includePrivate, includeDraft)
+	ret := m.ctrl.Call(m, "GetByUserID", ctx, userID, includePrivate, includeDraft, limit, offset)
 	ret0, _ := ret[0].([]*entity.Work)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // GetByUserID indicates an expected call of GetByUserID.
-func (mr *MockWorkRepositoryMockRecorder) GetByUserID(ctx, userID, includePrivate, includeDraft any) *gomock.Call {
+func (mr *MockWorkRepositoryMockRecorder) GetByUserID(ctx, userID, includePrivate, includeDraft, limit, offset any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserID", reflect.TypeOf((*MockWorkRepository)(nil).GetByUserID), ctx, userID, includePrivate, includeDraft)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserID", reflect.TypeOf((*MockWorkRepository)(nil).GetByUserID), ctx, userID, includePrivate, includeDraft, limit, offset)
 }
 
 // Update mocks base method.
