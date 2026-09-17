@@ -122,5 +122,8 @@ func (r *Router) Setup() *echo.Echo {
 	// Tag (認証必要 - 新規作成)
 	e.POST("/tags", r.TagController.CreateTag)
 
+	// Comment
+	e.DELETE("/comments/:comment_id", r.CommentController.DeleteComment)
+
 	return r.echo
 }

@@ -7,18 +7,20 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/database/types"
 )
 
 type Comment struct {
 	bun.BaseModel `bun:"table:comment"`
-	ID            uuid.UUID        `json:"id" bun:"id,pk"`
-	Content       string           `json:"content" bun:"content,notnull"`
-	WorkID        uuid.UUID        `json:"work_id" bun:"work_id,notnull"`
-	UserID        uuid.UUID        `json:"user_id" bun:"user_id"`
-	ReplyAt       string           `json:"reply_at" bun:"reply_at"`
-	User          *User            `bun:"rel:belongs-to,join:user_id=id"`
-	CreatedAt     time.Time        `json:"created_at" bun:"created_at,notnull"`
-	UpdatedAt     time.Time        `json:"updated_at" bun:"updated_at,notnull"`
+	ID            uuid.UUID           `json:"id" bun:"id,pk"`
+	Content       string              `json:"content" bun:"content,notnull"`
+	WorkID        uuid.UUID           `json:"work_id" bun:"work_id,notnull"`
+	UserID        uuid.UUID           `json:"user_id" bun:"user_id"`
+	ReplyAt       string              `json:"reply_at" bun:"reply_at"`
+	User          *User               `bun:"rel:belongs-to,join:user_id=id"`
+	Status        types.CommentStatus `json:"status" bun:"status,notnull"`
+	CreatedAt     time.Time           `json:"created_at" bun:"created_at,notnull"`
+	UpdatedAt     time.Time           `json:"updated_at" bun:"updated_at,notnull"`
 }
 
 func (c *Comment) ToCommentEntity() *entity.Comment {
@@ -28,14 +30,15 @@ func (c *Comment) ToCommentEntity() *entity.Comment {
 	}
 
 	return &entity.Comment{
-		ID:         c.ID,
-		Content:    c.Content,
-		WorkID:     c.WorkID,
-		UserID:     c.UserID,
-		ReplyAt:    c.ReplyAt,
-		User:       user,
-		CreatedAt:  c.CreatedAt,
-		UpdatedAt:  c.UpdatedAt,
+		ID:        c.ID,
+		Content:   c.Content,
+		WorkID:    c.WorkID,
+		UserID:    c.UserID,
+		ReplyAt:   c.ReplyAt,
+		User:      user,
+		Status:    string(c.Status),
+		CreatedAt: c.CreatedAt,
+		UpdatedAt: c.UpdatedAt,
 	}
 }
 
@@ -46,6 +49,7 @@ func ToCommentDTO(e *entity.Comment) *Comment {
 		WorkID:    e.WorkID,
 		UserID:    e.UserID,
 		ReplyAt:   e.ReplyAt,
+		Status:    types.CommentStatus(e.Status),
 		CreatedAt: e.CreatedAt,
 		UpdatedAt: e.UpdatedAt,
 	}

@@ -7,12 +7,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
+	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/domain/repository"
 )
 
 type ICommentUsecase interface {
 	GetCommentsByWorkID(ctx context.Context, workID uuid.UUID) ([]*entity.Comment, error)
 	CreateComment(ctx context.Context, content string, workID, userID uuid.UUID, replyAt string) (*entity.Comment, error)
+	DeleteComment(ctx context.Context, id, userID uuid.UUID) error
 }
 
 type commentUsecase struct {
@@ -38,7 +40,46 @@ func (uc *commentUsecase) GetCommentsByWorkID(ctx context.Context, workID uuid.U
 		return nil, fmt.Errorf("failed to get comments by work ID %s: %w", workID.String(), err)
 	}
 
-	return comments, nil
+	return filterVisibleComments(comments), nil
+}
+
+// 削除済みかつ表示可能な子孫を持たないコメントを一覧から除外します。
+func filterVisibleComments(comments []*entity.Comment) []*entity.Comment {
+	childrenOf := make(map[string][]*entity.Comment)
+	for _, comment := range comments {
+		if comment.ReplyAt != "" {
+			childrenOf[comment.ReplyAt] = append(childrenOf[comment.ReplyAt], comment)
+		}
+	}
+
+	visible := make(map[string]bool)
+	res := make([]*entity.Comment, 0, len(comments))
+	for _, comment := range comments {
+		if !isCommentVisible(comment, childrenOf, visible) {
+			continue
+		}
+		res = append(res, comment)
+	}
+	return res
+}
+
+// コメントが削除済みでも、表示可能な子孫を持つ場合はtrueを返します。
+// visible は同じ一覧内での再帰呼び出し間で結果を使い回すためのメモ化キャッシュです
+func isCommentVisible(comment *entity.Comment, childrenOf map[string][]*entity.Comment, visible map[string]bool) bool {
+	if v, ok := visible[comment.ID.String()]; ok {
+		return v
+	}
+	result := comment.Status != "deleted"
+	if !result {
+		for _, child := range childrenOf[comment.ID.String()] {
+			if isCommentVisible(child, childrenOf, visible) {
+				result = true
+				break
+			}
+		}
+	}
+	visible[comment.ID.String()] = result
+	return result
 }
 
 func (uc *commentUsecase) CreateComment(ctx context.Context, content string, workID, userID uuid.UUID, replyAt string) (*entity.Comment, error) {
@@ -80,4 +121,26 @@ func (uc *commentUsecase) CreateComment(ctx context.Context, content string, wor
 	}
 
 	return createdComment, nil
+}
+
+func (uc *commentUsecase) DeleteComment(ctx context.Context, id, userID uuid.UUID) error {
+	ctx, cancel := context.WithTimeout(ctx, uc.timeout)
+	defer cancel()
+
+	comment, err := uc.commentRepo.FindByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get comment by ID %s: %w", id.String(), err)
+	}
+	if comment.Status == "deleted" {
+		return domainerrors.ErrCommentNotFound
+	}
+	if comment.UserID != userID {
+		return domainerrors.ErrCommentNotOwnedByUser
+	}
+
+	if err := uc.commentRepo.Delete(ctx, id, userID); err != nil {
+		return fmt.Errorf("failed to delete comment %s: %w", id.String(), err)
+	}
+
+	return nil
 }

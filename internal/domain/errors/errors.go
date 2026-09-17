@@ -59,6 +59,8 @@ var (
 	ErrFailedToGetCommentById      = errors.New("failed to get comment by id")
 	ErrCommentNotFound             = errors.New("comment not found")
 	ErrFailedToCreateComment       = errors.New("failed to create comment")
+	ErrCommentNotOwnedByUser       = errors.New("comment not owned by user")
+	ErrFailedToDeleteComment       = errors.New("failed to delete comment")
 )
 
 // アセット関連のエラー定義

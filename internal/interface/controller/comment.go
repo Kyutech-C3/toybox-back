@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
@@ -101,6 +102,41 @@ func (cc *CommentController) CreateComment(c echo.Context) error {
 	return c.JSON(http.StatusCreated, schema.ToCreateCommentResponse(createdComment))
 }
 
+// DeleteComment godoc
+// @Summary Delete a comment
+// @Description Delete a comment. Only the author of the comment can delete it.
+// @Tags comments
+// @Param comment_id path string true "Comment ID"
+// @Success 204
+// @Failure 400 {object} echo.HTTPError
+// @Failure 403 {object} echo.HTTPError
+// @Failure 404 {object} echo.HTTPError
+// @Failure 500 {object} echo.HTTPError
+// @Security BearerAuth
+// @Router /auth/comments/{comment_id} [delete]
+func (cc *CommentController) DeleteComment(c echo.Context) error {
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*schema.JWTCustomClaims)
+	userID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		c.Logger().Error("Invalid user ID:", err)
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid user ID")
+	}
+
+	commentIDStr := c.Param("comment_id")
+	commentID, err := uuid.Parse(commentIDStr)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid comment ID format")
+	}
+
+	if err := cc.commentUsecase.DeleteComment(c.Request().Context(), commentID, userID); err != nil {
+		c.Logger().Error("CommentUsecase.DeleteComment error:", err)
+		return handleCommentError(c, err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 func handleCommentError(c echo.Context, err error) error {
 	var httpErr *echo.HTTPError
 	if errors.As(err, &httpErr) {
@@ -118,6 +154,10 @@ func handleCommentError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusNotFound, "コメントが見つかりませんでした")
 	case errors.Is(err, domainerrors.ErrFailedToCreateComment):
 		return echo.NewHTTPError(http.StatusInternalServerError, "コメントの作成に失敗しました")
+	case errors.Is(err, domainerrors.ErrCommentNotOwnedByUser):
+		return echo.NewHTTPError(http.StatusForbidden, "このコメントを削除する権限がありません")
+	case errors.Is(err, domainerrors.ErrFailedToDeleteComment):
+		return echo.NewHTTPError(http.StatusInternalServerError, "コメントの削除に失敗しました")
 	}
 
 	c.Logger().Error("Comment error:", err)
