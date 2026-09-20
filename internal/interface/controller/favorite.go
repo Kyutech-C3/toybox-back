@@ -165,6 +165,10 @@ func handleFavoriteError(err error) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "既にいいねしています")
 	case errors.Is(err, domainerrors.ErrFavoriteNotFound):
 		return echo.NewHTTPError(http.StatusNotFound, "いいねが見つかりませんでした")
+	case errors.Is(err, domainerrors.ErrWorkNotFound):
+		return echo.NewHTTPError(http.StatusNotFound, "作品が見つかりませんでした")
+	case errors.Is(err, domainerrors.ErrWorkNotViewable):
+		return echo.NewHTTPError(http.StatusForbidden, "この作品にはいいねできません")
 	}
 	return echo.NewHTTPError(http.StatusInternalServerError, "サーバーエラーが発生しました")
 }

@@ -51,6 +51,7 @@ var (
 	ErrFailedToCreateTagging               = errors.New("failed to create tagging")
 	ErrFailedToGetWorksByUserID            = errors.New("failed to get works by user id")
 	ErrWorkNotOwnedByUser                  = errors.New("work not owned by user")
+	ErrWorkNotViewable                     = errors.New("work is not viewable by user")
 	ErrFailedToDeleteWork                  = errors.New("failed to delete work")
 )
 
