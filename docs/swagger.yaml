@@ -121,7 +121,6 @@ definitions:
     - tag_ids
     - thumbnail_asset_id
     - title
-    - urls
     - visibility
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.CreateWorkOutput:
@@ -269,6 +268,7 @@ definitions:
       asset_ids:
         items:
           type: string
+        minItems: 1
         type: array
       collaborator_ids:
         items:
@@ -279,6 +279,7 @@ definitions:
       tag_ids:
         items:
           type: string
+        minItems: 1
         type: array
       thumbnail_asset_id:
         type: string

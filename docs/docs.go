@@ -1206,7 +1206,6 @@ const docTemplate = `{
                 "tag_ids",
                 "thumbnail_asset_id",
                 "title",
-                "urls",
                 "visibility"
             ],
             "properties": {
@@ -1473,6 +1472,7 @@ const docTemplate = `{
             "properties": {
                 "asset_ids": {
                     "type": "array",
+                    "minItems": 1,
                     "items": {
                         "type": "string"
                     }
@@ -1488,6 +1488,7 @@ const docTemplate = `{
                 },
                 "tag_ids": {
                     "type": "array",
+                    "minItems": 1,
                     "items": {
                         "type": "string"
                     }

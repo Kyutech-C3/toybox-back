@@ -1200,7 +1200,6 @@
                 "tag_ids",
                 "thumbnail_asset_id",
                 "title",
-                "urls",
                 "visibility"
             ],
             "properties": {
@@ -1467,6 +1466,7 @@
             "properties": {
                 "asset_ids": {
                     "type": "array",
+                    "minItems": 1,
                     "items": {
                         "type": "string"
                     }
@@ -1482,6 +1482,7 @@
                 },
                 "tag_ids": {
                     "type": "array",
+                    "minItems": 1,
                     "items": {
                         "type": "string"
                     }
