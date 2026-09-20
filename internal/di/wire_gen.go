@@ -56,7 +56,7 @@ func InitializeApp() (*App, func(), error) {
 	authController := controller.NewAuthController(iAuthUsecase)
 	iAssetUseCase := ProvideAssetUseCase(assetRepository)
 	assetController := controller.NewAssetController(iAssetUseCase)
-	iFavoriteUsecase := ProvideFavoriteUseCase(favoriteRepository)
+	iFavoriteUsecase := ProvideFavoriteUseCase(favoriteRepository, workRepository)
 	favoriteController := controller.NewFavoriteController(iFavoriteUsecase)
 	iTagUseCase := ProvideTagUseCase(tagRepository)
 	tagController := controller.NewTagController(iTagUseCase)
@@ -145,8 +145,8 @@ func ProvideAssetUseCase(assetRepo repository.AssetRepository) usecase.IAssetUse
 }
 
 // ProvideFavoriteUseCase はFavoriteUseCaseを提供します
-func ProvideFavoriteUseCase(favoriteRepo repository.FavoriteRepository) usecase.IFavoriteUsecase {
-	return usecase.NewFavoriteUsecase(favoriteRepo)
+func ProvideFavoriteUseCase(favoriteRepo repository.FavoriteRepository, workRepo repository.WorkRepository) usecase.IFavoriteUsecase {
+	return usecase.NewFavoriteUsecase(favoriteRepo, workRepo)
 }
 
 // ProvideTagUseCase はTagUseCaseを提供します

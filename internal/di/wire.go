@@ -134,8 +134,8 @@ func ProvideAssetUseCase(assetRepo repository.AssetRepository) usecase.IAssetUse
 }
 
 // ProvideFavoriteUseCase はFavoriteUseCaseを提供します
-func ProvideFavoriteUseCase(favoriteRepo repository.FavoriteRepository) usecase.IFavoriteUsecase {
-	return usecase.NewFavoriteUsecase(favoriteRepo)
+func ProvideFavoriteUseCase(favoriteRepo repository.FavoriteRepository, workRepo repository.WorkRepository) usecase.IFavoriteUsecase {
+	return usecase.NewFavoriteUsecase(favoriteRepo, workRepo)
 }
 
 // ProvideTagUseCase はTagUseCaseを提供します
