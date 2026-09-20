@@ -81,6 +81,32 @@ func TestFavoriteController_CreateFavorite(t *testing.T) {
 			wantBody:   `{"message":"既にいいねしています"}`,
 			wantJSON:   true,
 		},
+		{
+			name:   "異常系: 作品が存在しない場合はエラーを返す",
+			userID: successUserID.String(),
+			workID: successWorkID.String(),
+			setupMock: func(m *mock.MockIFavoriteUsecase) {
+				m.EXPECT().
+					CreateFavorite(gomock.Any(), successWorkID, successUserID).
+					Return(domainerrors.ErrWorkNotFound)
+			},
+			wantStatus: http.StatusNotFound,
+			wantBody:   `{"message":"作品が見つかりませんでした"}`,
+			wantJSON:   true,
+		},
+		{
+			name:   "異常系: 閲覧できない作品にはいいねできない",
+			userID: successUserID.String(),
+			workID: successWorkID.String(),
+			setupMock: func(m *mock.MockIFavoriteUsecase) {
+				m.EXPECT().
+					CreateFavorite(gomock.Any(), successWorkID, successUserID).
+					Return(domainerrors.ErrWorkNotViewable)
+			},
+			wantStatus: http.StatusForbidden,
+			wantBody:   `{"message":"この作品にはいいねできません"}`,
+			wantJSON:   true,
+		},
 	}
 
 	for _, tt := range tests {
