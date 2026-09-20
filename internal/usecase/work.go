@@ -219,6 +219,9 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 		work.Visibility = *visibility
 	}
 	if thumbnailAssetID != nil {
+		if *thumbnailAssetID == uuid.Nil {
+			return nil, domainerrors.ErrInvalidThumbnailAssetID
+		}
 		work.ThumbnailAssetID = *thumbnailAssetID
 	}
 	var removedAssets []*entity.Asset
