@@ -324,8 +324,12 @@ func handleWorkError(c echo.Context, err error) error {
 	switch {
 	case errors.Is(err, domainerrors.ErrInvalidRequestBody):
 		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストボディです")
-	case errors.Is(err, domainerrors.ErrFailedToGetWorkById):
-		return echo.NewHTTPError(http.StatusNotFound, "作品が見つかりませんでした")
+	case errors.Is(err, domainerrors.ErrInvalidTitle):
+		return echo.NewHTTPError(http.StatusBadRequest, "タイトルが不正です")
+	case errors.Is(err, domainerrors.ErrInvalidDescription):
+		return echo.NewHTTPError(http.StatusBadRequest, "説明が不正です")
+	case errors.Is(err, domainerrors.ErrInvalidVisibility):
+		return echo.NewHTTPError(http.StatusBadRequest, "公開設定が不正です")
 	case errors.Is(err, domainerrors.ErrFailedToGetAllWorksByLimitAndOffset):
 		return echo.NewHTTPError(http.StatusInternalServerError, "作品の取得に失敗しました")
 	case errors.Is(err, domainerrors.ErrFailedToGetWorkById):
