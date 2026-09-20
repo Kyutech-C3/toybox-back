@@ -75,6 +75,6 @@ func ToCreateCommentResponse(comment *entity.Comment) *CreateCommentResponse {
 		ID:        comment.ID.String(),
 		Content:   comment.Content,
 		ReplyAt:   comment.ReplyAt,
-		CreatedAt: comment.CreatedAt.String(),
+		CreatedAt: comment.CreatedAt.Format(time.RFC3339),
 	}
 }
