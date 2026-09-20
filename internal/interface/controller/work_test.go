@@ -389,6 +389,17 @@ func TestWorkController_CreateWork(t *testing.T) {
 	}
 	inputJSON, _ := json.Marshal(input)
 
+	emptyURLsInput := &schema.CreateWorkInput{
+		Title:            "New Work",
+		Description:      "New Description",
+		ThumbnailAssetID: uuid.New(),
+		AssetIDs:         []uuid.UUID{uuid.New()},
+		Visibility:       "public",
+		URLs:             []string{},
+		TagIDs:           []uuid.UUID{uuid.New()},
+	}
+	emptyURLsInputJSON, _ := json.Marshal(emptyURLsInput)
+
 	createdWork := &entity.Work{
 		ID:        uuid.New(),
 		Title:     input.Title,
@@ -416,6 +427,17 @@ func TestWorkController_CreateWork(t *testing.T) {
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
 					CreateWork(gomock.Any(), input.Title, input.Description, input.Visibility, input.ThumbnailAssetID, input.AssetIDs, input.URLs, userID, input.TagIDs, gomock.Any()).
+					Return(createdWork, nil)
+			},
+			wantStatus: http.StatusCreated,
+			wantBody:   successResponseBytes,
+		},
+		{
+			name: "正常系: urlsが空でも作成できる",
+			body: emptyURLsInputJSON,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+				mockWorkUsecase.EXPECT().
+					CreateWork(gomock.Any(), emptyURLsInput.Title, emptyURLsInput.Description, emptyURLsInput.Visibility, emptyURLsInput.ThumbnailAssetID, emptyURLsInput.AssetIDs, emptyURLsInput.URLs, userID, emptyURLsInput.TagIDs, gomock.Any()).
 					Return(createdWork, nil)
 			},
 			wantStatus: http.StatusCreated,
@@ -516,6 +538,15 @@ func TestWorkController_UpdateWork(t *testing.T) {
 	}
 	inputJSON, _ := json.Marshal(input)
 
+	emptyTagIDs := []uuid.UUID{}
+	emptyTagIDsJSON, _ := json.Marshal(&schema.UpdateWorkInput{TagIDs: &emptyTagIDs})
+
+	emptyAssetIDs := []uuid.UUID{}
+	emptyAssetIDsJSON, _ := json.Marshal(&schema.UpdateWorkInput{AssetIDs: &emptyAssetIDs})
+
+	nilThumbnailAssetID := uuid.Nil
+	nilThumbnailAssetIDJSON, _ := json.Marshal(&schema.UpdateWorkInput{ThumbnailAssetID: &nilThumbnailAssetID})
+
 	updatedWorkEntity := &entity.Work{
 		ID:          workID,
 		Title:       updatedTitle,
@@ -529,6 +560,7 @@ func TestWorkController_UpdateWork(t *testing.T) {
 	forbiddenResponseBytes, _ := json.Marshal(map[string]string{"message": "この作品を削除する権限がありません"}) // Error message from DeleteWork in controller
 	notFoundResponseBytes, _ := json.Marshal(map[string]string{"message": "作品が見つかりませんでした"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
+	invalidThumbnailAssetIDResponseBytes, _ := json.Marshal(map[string]string{"message": "サムネイルのアセットIDが不正です"})
 
 	tests := []struct {
 		name       string
@@ -608,6 +640,37 @@ func TestWorkController_UpdateWork(t *testing.T) {
 			},
 			wantStatus: http.StatusInternalServerError,
 			wantBody:   internalErrorResponseBytes,
+		},
+		{
+			name:       "異常系: tag_idsが空配列",
+			workID:     workID.String(),
+			body:       emptyTagIDsJSON,
+			userID:     userID,
+			setupMock:  func(mockWorkUsecase *mock.MockIWorkUseCase) {},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   badRequestResponseBytes,
+		},
+		{
+			name:       "異常系: asset_idsが空配列",
+			workID:     workID.String(),
+			body:       emptyAssetIDsJSON,
+			userID:     userID,
+			setupMock:  func(mockWorkUsecase *mock.MockIWorkUseCase) {},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   badRequestResponseBytes,
+		},
+		{
+			name:   "異常系: thumbnail_asset_idがNil UUID",
+			workID: workID.String(),
+			body:   nilThumbnailAssetIDJSON,
+			userID: userID,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+				mockWorkUsecase.EXPECT().
+					UpdateWork(gomock.Any(), workID, userID, nil, nil, nil, &nilThumbnailAssetID, nil, nil, nil, nil).
+					Return(nil, domainerrors.ErrInvalidThumbnailAssetID)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   invalidThumbnailAssetIDResponseBytes,
 		},
 	}
 

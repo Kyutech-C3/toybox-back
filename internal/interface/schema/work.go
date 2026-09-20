@@ -36,7 +36,7 @@ type CreateWorkInput struct {
 	Visibility       string      `json:"visibility" validate:"required,oneof=public private draft"`
 	ThumbnailAssetID uuid.UUID   `json:"thumbnail_asset_id" validate:"required,uuid"`
 	AssetIDs         []uuid.UUID `json:"asset_ids" validate:"required,dive,uuid"`
-	URLs             []string    `json:"urls" validate:"required,dive,url"`
+	URLs             []string    `json:"urls" validate:"omitempty,dive,url"`
 	TagIDs           []uuid.UUID `json:"tag_ids" validate:"required,dive,uuid"`
 	CollaboratorIDs  []uuid.UUID `json:"collaborator_ids,omitempty" validate:"omitempty,dive,uuid"`
 }
@@ -56,9 +56,9 @@ type UpdateWorkInput struct {
 	Description      *string      `json:"description,omitempty"`
 	Visibility       *string      `json:"visibility,omitempty" validate:"omitempty,oneof=public private draft"`
 	ThumbnailAssetID *uuid.UUID   `json:"thumbnail_asset_id,omitempty" validate:"omitempty,uuid"`
-	AssetIDs         *[]uuid.UUID `json:"asset_ids,omitempty" validate:"omitempty,dive,uuid"`
+	AssetIDs         *[]uuid.UUID `json:"asset_ids,omitempty" validate:"omitempty,min=1,dive,uuid"`
 	URLs             *[]string    `json:"urls,omitempty" validate:"omitempty,dive,url"`
-	TagIDs           *[]uuid.UUID `json:"tag_ids,omitempty" validate:"omitempty,dive,uuid"`
+	TagIDs           *[]uuid.UUID `json:"tag_ids,omitempty" validate:"omitempty,min=1,dive,uuid"`
 	CollaboratorIDs  *[]uuid.UUID `json:"collaborator_ids,omitempty" validate:"omitempty,dive,uuid"`
 }
 

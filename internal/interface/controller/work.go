@@ -354,6 +354,8 @@ func handleWorkError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "存在しないタグIDが含まれています")
 	case errors.Is(err, domainerrors.ErrInvalidTagIDs):
 		return echo.NewHTTPError(http.StatusBadRequest, "タグが指定されていません")
+	case errors.Is(err, domainerrors.ErrInvalidThumbnailAssetID):
+		return echo.NewHTTPError(http.StatusBadRequest, "サムネイルのアセットIDが不正です")
 	case errors.Is(err, domainerrors.ErrOwnerCannotBeCollaborator):
 		return echo.NewHTTPError(http.StatusBadRequest, "作品のオーナーを共同制作者として追加することはできません")
 	case errors.Is(err, domainerrors.ErrWorkNotOwnedByUser):
