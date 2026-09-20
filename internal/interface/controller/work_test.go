@@ -399,6 +399,9 @@ func TestWorkController_CreateWork(t *testing.T) {
 	successResponseBytes, _ := json.Marshal(schema.ToCreateWorkOutput(createdWork))
 	badRequestResponseBytes, _ := json.Marshal(map[string]string{"message": "無効なリクエストボディです"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
+	invalidTitleResponseBytes, _ := json.Marshal(map[string]string{"message": "タイトルが不正です"})
+	invalidDescriptionResponseBytes, _ := json.Marshal(map[string]string{"message": "説明が不正です"})
+	invalidVisibilityResponseBytes, _ := json.Marshal(map[string]string{"message": "公開設定が不正です"})
 
 	tests := []struct {
 		name       string
@@ -435,6 +438,39 @@ func TestWorkController_CreateWork(t *testing.T) {
 			},
 			wantStatus: http.StatusInternalServerError,
 			wantBody:   internalErrorResponseBytes,
+		},
+		{
+			name: "異常系: タイトルが不正",
+			body: inputJSON,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+				mockWorkUsecase.EXPECT().
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, domainerrors.ErrInvalidTitle)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   invalidTitleResponseBytes,
+		},
+		{
+			name: "異常系: 説明が不正",
+			body: inputJSON,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+				mockWorkUsecase.EXPECT().
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, domainerrors.ErrInvalidDescription)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   invalidDescriptionResponseBytes,
+		},
+		{
+			name: "異常系: 公開設定が不正",
+			body: inputJSON,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+				mockWorkUsecase.EXPECT().
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, domainerrors.ErrInvalidVisibility)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   invalidVisibilityResponseBytes,
 		},
 	}
 
