@@ -28,6 +28,10 @@ func TestTagUseCase_Create(t *testing.T) {
 			tagName: "Go",
 			setupMock: func(m *mock.MockTagRepository) {
 				m.EXPECT().
+					ExistsByName(gomock.Any(), "go").
+					Return(false, nil).
+					Times(1)
+				m.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, tag *entity.Tag) (*entity.Tag, error) {
 						return tag, nil
@@ -48,8 +52,34 @@ func TestTagUseCase_Create(t *testing.T) {
 			tagName: "Rust",
 			setupMock: func(m *mock.MockTagRepository) {
 				m.EXPECT().
+					ExistsByName(gomock.Any(), "rust").
+					Return(false, nil).
+					Times(1)
+				m.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
 					Return(nil, domainerrors.ErrFailedToCreateTag).
+					Times(1)
+			},
+			wantErr: true,
+		},
+		{
+			name:    "異常系: 既に存在するタグ名",
+			tagName: "Go",
+			setupMock: func(m *mock.MockTagRepository) {
+				m.EXPECT().
+					ExistsByName(gomock.Any(), "go").
+					Return(true, nil).
+					Times(1)
+			},
+			wantErr: true,
+		},
+		{
+			name:    "異常系: 存在確認のリポジトリエラー",
+			tagName: "Go",
+			setupMock: func(m *mock.MockTagRepository) {
+				m.EXPECT().
+					ExistsByName(gomock.Any(), "go").
+					Return(false, domainerrors.ErrFailedToCheckTagExists).
 					Times(1)
 			},
 			wantErr: true,

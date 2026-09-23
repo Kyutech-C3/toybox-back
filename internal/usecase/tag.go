@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,6 +39,15 @@ func (uc *tagUseCase) Create(ctx context.Context, name string) (*entity.Tag, err
 		UpdatedAt: now,
 	}
 	tag.NormalizeName()
+
+	exists, err := uc.tagRepo.ExistsByName(ctx, tag.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check tag existence: %w", err)
+	}
+	if exists {
+		return nil, domainerrors.ErrTagAlreadyExists
+	}
+
 	createdTag, err := uc.tagRepo.Create(ctx, tag)
 	if err != nil {
 		return nil, err
