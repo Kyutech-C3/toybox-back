@@ -12,4 +12,5 @@ type TagRepository interface {
 	FindAllByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.Tag, error)
 	Create(ctx context.Context, tag *entity.Tag) (*entity.Tag, error)
 	FindAll(ctx context.Context) ([]*entity.Tag, error)
+	CountWorksByTag(ctx context.Context, includePrivate bool) (map[uuid.UUID]int, error)
 }

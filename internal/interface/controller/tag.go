@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/interface/schema"
@@ -56,10 +58,26 @@ func (tc *TagController) CreateTag(c echo.Context) error {
 // @Tags tags
 // @Produce json
 // @Success 200 {object} schema.TagListResponse
+// @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /tags [get]
 func (tc *TagController) GetAllTags(c echo.Context) error {
-	tags, err := tc.tagUsecase.GetAll(c.Request().Context())
+	rawUser := c.Get("user")
+	var userID uuid.UUID
+	if rawUser == nil {
+		userID = uuid.Nil
+	} else {
+		user := rawUser.(*jwt.Token)
+		claims := user.Claims.(*schema.JWTCustomClaims)
+		var err error
+		userID, err = uuid.Parse(claims.UserID)
+		if err != nil {
+			return handleTagError(c, domainerrors.ErrInvalidRequestBody)
+		}
+	}
+
+	authenticated := userID != uuid.Nil
+	tags, err := tc.tagUsecase.GetAll(c.Request().Context(), authenticated)
 	if err != nil {
 		return handleTagError(c, err)
 	}

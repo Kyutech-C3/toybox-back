@@ -90,8 +90,8 @@ func (r *Router) Setup() *echo.Echo {
 	// Favorite
 	r.echo.GET("/works/:work_id/favorite", r.FavoriteController.CountFavoritesByWorkID)
 
-	// Tag (認証不要 - 一覧取得)
-	r.echo.GET("/tags", r.TagController.GetAllTags)
+	// Tag (認証任意 - 一覧取得)
+	r.echo.GET("/tags", r.TagController.GetAllTags, echojwt.WithConfig(optionalConfig))
 
 	config := echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
