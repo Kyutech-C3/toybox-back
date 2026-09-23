@@ -469,6 +469,16 @@ func (r *WorkRepository) Delete(ctx context.Context, id uuid.UUID, userID uuid.U
 		return domainerrors.ErrFailedToDeleteWork
 	}
 
+	_, err = tx.NewDelete().Model(&dto.Comment{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Favorite{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
 	_, err = tx.NewDelete().Model(&dto.Work{}).Where("id = ?", id).Exec(ctx)
 	if err != nil {
 		return domainerrors.ErrFailedToDeleteWork
