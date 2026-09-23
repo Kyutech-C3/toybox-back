@@ -31,10 +31,10 @@ func TestFavoriteUsecase_CreateFavorite(t *testing.T) {
 			setupFavoriteMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
 				m.EXPECT().
 					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-					DoAndReturn(func(_ context.Context, fav *entity.Favorite) bool {
+					DoAndReturn(func(_ context.Context, fav *entity.Favorite) (bool, error) {
 						assert.Equal(t, workID, fav.WorkID)
 						assert.Equal(t, userID, fav.UserID)
-						return false
+						return false, nil
 					})
 				m.EXPECT().
 					Create(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
@@ -56,7 +56,7 @@ func TestFavoriteUsecase_CreateFavorite(t *testing.T) {
 			setupFavoriteMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
 				m.EXPECT().
 					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-					Return(false)
+					Return(false, nil)
 				m.EXPECT().
 					Create(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
 					DoAndReturn(func(_ context.Context, fav *entity.Favorite) (*entity.Favorite, error) {
@@ -97,10 +97,10 @@ func TestFavoriteUsecase_CreateFavorite(t *testing.T) {
 			setupFavoriteMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
 				m.EXPECT().
 					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-					DoAndReturn(func(_ context.Context, fav *entity.Favorite) bool {
+					DoAndReturn(func(_ context.Context, fav *entity.Favorite) (bool, error) {
 						assert.Equal(t, workID, fav.WorkID)
 						assert.Equal(t, userID, fav.UserID)
-						return true
+						return true, nil
 					})
 			},
 			wantErr: true,
@@ -116,13 +116,28 @@ func TestFavoriteUsecase_CreateFavorite(t *testing.T) {
 			setupFavoriteMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
 				m.EXPECT().
 					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-					Return(false)
+					Return(false, nil)
 				m.EXPECT().
 					Create(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
 					Return(nil, domainerrors.ErrFailedToCreateFavorite)
 			},
 			wantErr: true,
 			errIs:   domainerrors.ErrFailedToCreateFavorite,
+		},
+		{
+			name: "異常系: 存在確認のリポジトリエラーをラップして返す",
+			setupWorkMock: func(m *mock.MockWorkRepository, workID, userID uuid.UUID) {
+				m.EXPECT().
+					GetByID(gomock.Any(), workID).
+					Return(&entity.Work{ID: workID, UserID: uuid.New(), Visibility: "public"}, nil)
+			},
+			setupFavoriteMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
+				m.EXPECT().
+					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
+					Return(false, domainerrors.ErrFailedToCheckFavoriteExists)
+			},
+			wantErr: true,
+			errIs:   domainerrors.ErrFailedToCheckFavoriteExists,
 		},
 	}
 
@@ -167,7 +182,7 @@ func TestFavoriteUsecase_DeleteFavorite(t *testing.T) {
 			setupMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
 				m.EXPECT().
 					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-					Return(true)
+					Return(true, nil)
 				m.EXPECT().
 					Delete(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
 					Return(nil)
@@ -179,7 +194,7 @@ func TestFavoriteUsecase_DeleteFavorite(t *testing.T) {
 			setupMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
 				m.EXPECT().
 					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-					Return(false)
+					Return(false, nil)
 			},
 			wantErr: true,
 			errIs:   domainerrors.ErrFavoriteNotFound,
@@ -189,13 +204,23 @@ func TestFavoriteUsecase_DeleteFavorite(t *testing.T) {
 			setupMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
 				m.EXPECT().
 					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-					Return(true)
+					Return(true, nil)
 				m.EXPECT().
 					Delete(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
 					Return(domainerrors.ErrFailedToDeleteFavorite)
 			},
 			wantErr: true,
 			errIs:   domainerrors.ErrFailedToDeleteFavorite,
+		},
+		{
+			name: "異常系: 存在確認のリポジトリエラーをラップして返す",
+			setupMock: func(m *mock.MockFavoriteRepository, workID, userID uuid.UUID) {
+				m.EXPECT().
+					Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
+					Return(false, domainerrors.ErrFailedToCheckFavoriteExists)
+			},
+			wantErr: true,
+			errIs:   domainerrors.ErrFailedToCheckFavoriteExists,
 		},
 	}
 
@@ -265,19 +290,31 @@ func TestFavoriteUsecase_IsFavorite(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
-	mockFavoriteRepo.EXPECT().
-		Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-		Return(true)
-	mockFavoriteRepo.EXPECT().
-		Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
-		Return(false)
+	gomock.InOrder(
+		mockFavoriteRepo.EXPECT().
+			Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
+			Return(true, nil),
+		mockFavoriteRepo.EXPECT().
+			Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
+			Return(false, nil),
+		mockFavoriteRepo.EXPECT().
+			Exists(gomock.Any(), gomock.AssignableToTypeOf(&entity.Favorite{})).
+			Return(false, domainerrors.ErrFailedToCheckFavoriteExists),
+	)
 
 	mockWorkRepo := mock.NewMockWorkRepository(ctrl)
 	uc := usecase.NewFavoriteUsecase(mockFavoriteRepo, mockWorkRepo)
 
-	isFavorite := uc.IsFavorite(context.Background(), workID, userID)
+	isFavorite, err := uc.IsFavorite(context.Background(), workID, userID)
+	assert.NoError(t, err)
 	assert.True(t, isFavorite)
 
-	isFavorite = uc.IsFavorite(context.Background(), workID, userID)
+	isFavorite, err = uc.IsFavorite(context.Background(), workID, userID)
+	assert.NoError(t, err)
+	assert.False(t, isFavorite)
+
+	isFavorite, err = uc.IsFavorite(context.Background(), workID, userID)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, domainerrors.ErrFailedToCheckFavoriteExists)
 	assert.False(t, isFavorite)
 }

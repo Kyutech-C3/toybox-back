@@ -87,11 +87,12 @@ func (mr *MockFavoriteRepositoryMockRecorder) Delete(ctx, favorite any) *gomock.
 }
 
 // Exists mocks base method.
-func (m *MockFavoriteRepository) Exists(ctx context.Context, favorite *entity.Favorite) bool {
+func (m *MockFavoriteRepository) Exists(ctx context.Context, favorite *entity.Favorite) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exists", ctx, favorite)
 	ret0, _ := ret[0].(bool)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Exists indicates an expected call of Exists.
