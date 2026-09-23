@@ -68,9 +68,12 @@ func (uc *commentUsecase) CreateComment(ctx context.Context, content string, wor
 		if err != nil {
 			return nil, fmt.Errorf("invalid reply_at format: %w", err)
 		}
-		_, err = uc.commentRepo.FindByID(ctx, replyID)
+		replyComment, err := uc.commentRepo.FindByID(ctx, replyID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to validate reply target comment %s: %w", replyAt, err)
+		}
+		if replyComment.WorkID != workID {
+			return nil, domainerrors.ErrInvalidReplyAt
 		}
 	}
 	comment := entity.NewComment(content, workID, userID, replyAt)
