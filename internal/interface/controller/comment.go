@@ -118,6 +118,8 @@ func handleCommentError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusNotFound, "コメントが見つかりませんでした")
 	case errors.Is(err, domainerrors.ErrFailedToCreateComment):
 		return echo.NewHTTPError(http.StatusInternalServerError, "コメントの作成に失敗しました")
+	case errors.Is(err, domainerrors.ErrWorkNotFound):
+		return echo.NewHTTPError(http.StatusNotFound, "作品が見つかりませんでした")
 	}
 
 	c.Logger().Error("Comment error:", err)
