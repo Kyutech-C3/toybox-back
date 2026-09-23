@@ -61,6 +61,7 @@ var (
 	ErrFailedToGetCommentById      = errors.New("failed to get comment by id")
 	ErrCommentNotFound             = errors.New("comment not found")
 	ErrFailedToCreateComment       = errors.New("failed to create comment")
+	ErrInvalidReplyAt              = errors.New("invalid reply_at")
 )
 
 // アセット関連のエラー定義
