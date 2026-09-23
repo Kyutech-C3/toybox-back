@@ -83,53 +83,95 @@ func TestTagUseCase_Create(t *testing.T) {
 
 func TestTagUseCase_GetAll(t *testing.T) {
 	now := time.Now()
+	tag1ID := uuid.New()
+	tag2ID := uuid.New()
 	tests := []struct {
-		name      string
-		setupMock func(*mock.MockTagRepository)
-		wantCount int
-		wantErr   bool
+		name          string
+		authenticated bool
+		setupMock     func(*mock.MockTagRepository)
+		wantCount     int
+		wantWorkCount map[uuid.UUID]int
+		wantErr       bool
 	}{
 		{
-			name: "正常系: タグ一覧取得成功",
+			name:          "正常系: タグ一覧取得成功（未認証、作品数がマージされる）",
+			authenticated: false,
 			setupMock: func(m *mock.MockTagRepository) {
 				expectedTags := []*entity.Tag{
-					{
-						ID:        uuid.New(),
-						Name:      "Go",
-						CreatedAt: now,
-						UpdatedAt: now,
-					},
-					{
-						ID:        uuid.New(),
-						Name:      "Rust",
-						CreatedAt: now,
-						UpdatedAt: now,
-					},
+					{ID: tag1ID, Name: "Go", CreatedAt: now, UpdatedAt: now},
+					{ID: tag2ID, Name: "Rust", CreatedAt: now, UpdatedAt: now},
 				}
 				m.EXPECT().
 					FindAll(gomock.Any()).
 					Return(expectedTags, nil).
 					Times(1)
+				m.EXPECT().
+					CountWorksByTag(gomock.Any(), false).
+					Return(map[uuid.UUID]int{tag1ID: 3}, nil).
+					Times(1)
 			},
-			wantCount: 2,
-			wantErr:   false,
+			wantCount:     2,
+			wantWorkCount: map[uuid.UUID]int{tag1ID: 3, tag2ID: 0},
+			wantErr:       false,
 		},
 		{
-			name: "正常系: タグが0件",
+			name:          "正常系: 認証済みの場合CountWorksByTagにtrueが渡る",
+			authenticated: true,
+			setupMock: func(m *mock.MockTagRepository) {
+				expectedTags := []*entity.Tag{
+					{ID: tag1ID, Name: "Go", CreatedAt: now, UpdatedAt: now},
+				}
+				m.EXPECT().
+					FindAll(gomock.Any()).
+					Return(expectedTags, nil).
+					Times(1)
+				m.EXPECT().
+					CountWorksByTag(gomock.Any(), true).
+					Return(map[uuid.UUID]int{tag1ID: 5}, nil).
+					Times(1)
+			},
+			wantCount:     1,
+			wantWorkCount: map[uuid.UUID]int{tag1ID: 5},
+			wantErr:       false,
+		},
+		{
+			name:          "正常系: タグが0件",
+			authenticated: false,
 			setupMock: func(m *mock.MockTagRepository) {
 				m.EXPECT().
 					FindAll(gomock.Any()).
 					Return([]*entity.Tag{}, nil).
+					Times(1)
+				m.EXPECT().
+					CountWorksByTag(gomock.Any(), false).
+					Return(map[uuid.UUID]int{}, nil).
 					Times(1)
 			},
 			wantCount: 0,
 			wantErr:   false,
 		},
 		{
-			name: "異常系: リポジトリエラー",
+			name:          "異常系: FindAllのリポジトリエラー",
+			authenticated: false,
 			setupMock: func(m *mock.MockTagRepository) {
 				m.EXPECT().
 					FindAll(gomock.Any()).
+					Return(nil, errors.New("database error")).
+					Times(1)
+			},
+			wantCount: 0,
+			wantErr:   true,
+		},
+		{
+			name:          "異常系: CountWorksByTagのリポジトリエラー",
+			authenticated: false,
+			setupMock: func(m *mock.MockTagRepository) {
+				m.EXPECT().
+					FindAll(gomock.Any()).
+					Return([]*entity.Tag{{ID: tag1ID, Name: "Go", CreatedAt: now, UpdatedAt: now}}, nil).
+					Times(1)
+				m.EXPECT().
+					CountWorksByTag(gomock.Any(), false).
 					Return(nil, errors.New("database error")).
 					Times(1)
 			},
@@ -148,7 +190,7 @@ func TestTagUseCase_GetAll(t *testing.T) {
 
 			uc := usecase.NewTagUseCase(mockRepo)
 
-			got, err := uc.GetAll(context.Background())
+			got, err := uc.GetAll(context.Background(), tt.authenticated)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -157,6 +199,9 @@ func TestTagUseCase_GetAll(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Len(t, got, tt.wantCount)
+				for _, tag := range got {
+					assert.Equal(t, tt.wantWorkCount[tag.ID], tag.WorkCount)
+				}
 			}
 		})
 	}
