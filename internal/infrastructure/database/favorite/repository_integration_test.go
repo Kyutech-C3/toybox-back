@@ -42,7 +42,8 @@ func TestFavoriteRepository_Create(t *testing.T) {
 	require.Equal(t, user.ID, created.UserID)
 	require.WithinDuration(t, fav.CreatedAt, created.CreatedAt, time.Second)
 
-	exists := repo.Exists(ctx, fav)
+	exists, err := repo.Exists(ctx, fav)
+	require.NoError(t, err)
 	require.True(t, exists)
 }
 
@@ -79,7 +80,9 @@ func TestFavoriteRepository_Delete(t *testing.T) {
 	err = repo.Delete(ctx, fav)
 	require.NoError(t, err)
 
-	require.False(t, repo.Exists(ctx, fav))
+	exists, err := repo.Exists(ctx, fav)
+	require.NoError(t, err)
+	require.False(t, exists)
 }
 
 func TestFavoriteRepository_CountByWorkID(t *testing.T) {
@@ -119,10 +122,14 @@ func TestFavoriteRepository_Exists(t *testing.T) {
 	_, err := repo.Create(ctx, fav)
 	require.NoError(t, err)
 
-	require.True(t, repo.Exists(ctx, fav))
+	exists, err := repo.Exists(ctx, fav)
+	require.NoError(t, err)
+	require.True(t, exists)
 
 	otherFav := entity.NewFavorite(work.ID, otherUser.ID)
-	require.False(t, repo.Exists(ctx, otherFav))
+	exists, err = repo.Exists(ctx, otherFav)
+	require.NoError(t, err)
+	require.False(t, exists)
 }
 
 func TestFavoriteRepository_FindFavoritedWorkIDs(t *testing.T) {

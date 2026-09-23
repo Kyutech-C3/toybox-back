@@ -353,7 +353,7 @@ func TestFavoriteController_IsFavorite(t *testing.T) {
 			setupMock: func(m *mock.MockIFavoriteUsecase) {
 				m.EXPECT().
 					IsFavorite(gomock.Any(), workID, userID).
-					Return(true)
+					Return(true, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   string(trueResponse),
@@ -366,7 +366,7 @@ func TestFavoriteController_IsFavorite(t *testing.T) {
 			setupMock: func(m *mock.MockIFavoriteUsecase) {
 				m.EXPECT().
 					IsFavorite(gomock.Any(), workID, userID).
-					Return(false)
+					Return(false, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   string(falseResponse),
@@ -396,6 +396,19 @@ func TestFavoriteController_IsFavorite(t *testing.T) {
 			},
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"message":"Invalid user ID"}`,
+			wantJSON:   true,
+		},
+		{
+			name:   "異常系: いいね状態の確認に失敗した場合は500を返す",
+			userID: userID.String(),
+			workID: workID.String(),
+			setupMock: func(m *mock.MockIFavoriteUsecase) {
+				m.EXPECT().
+					IsFavorite(gomock.Any(), workID, userID).
+					Return(false, domainerrors.ErrFailedToCheckFavoriteExists)
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantBody:   `{"message":"いいね状態の確認に失敗しました"}`,
 			wantJSON:   true,
 		},
 	}
