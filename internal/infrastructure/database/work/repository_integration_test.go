@@ -1089,3 +1089,60 @@ func TestWorkRepository_Delete_CascadeCollaborators(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, count, "作品削除時にcollaboratorレコードも削除される")
 }
+
+func TestWorkRepository_Delete_CascadeComments(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	owner := insertTestUser(t, db)
+
+	work := newTestWork(owner.ID, "work-to-delete-with-comments")
+	created, err := repo.Create(ctx, work)
+	require.NoError(t, err)
+
+	comment := dto.ToCommentDTO(entity.NewComment("test comment", created.ID, owner.ID, ""))
+	_, err = db.NewInsert().Model(comment).Exec(ctx)
+	require.NoError(t, err)
+
+	// 作品削除
+	err = repo.Delete(ctx, created.ID, owner.ID)
+	require.NoError(t, err)
+
+	// commentテーブルのレコードも削除されていることを確認
+	count, err := db.NewSelect().
+		Table("comment").
+		Where("work_id = ?", created.ID).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, count, "作品削除時にcommentレコードも削除される")
+}
+
+func TestWorkRepository_Delete_CascadeFavorites(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	owner := insertTestUser(t, db)
+	favoritedBy := insertTestUser(t, db)
+
+	work := newTestWork(owner.ID, "work-to-delete-with-favorites")
+	created, err := repo.Create(ctx, work)
+	require.NoError(t, err)
+
+	favorite := dto.ToFavoriteDTO(entity.NewFavorite(created.ID, favoritedBy.ID))
+	_, err = db.NewInsert().Model(favorite).Exec(ctx)
+	require.NoError(t, err)
+
+	// 作品削除
+	err = repo.Delete(ctx, created.ID, owner.ID)
+	require.NoError(t, err)
+
+	// favoriteテーブルのレコードも削除されていることを確認
+	count, err := db.NewSelect().
+		Table("favorite").
+		Where("work_id = ?", created.ID).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, count, "作品削除時にfavoriteレコードも削除される")
+}
