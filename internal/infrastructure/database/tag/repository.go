@@ -38,6 +38,17 @@ func (r *TagRepository) ExistAll(ctx context.Context, ids []uuid.UUID) (bool, er
 	return count == len(ids), nil
 }
 
+func (r *TagRepository) ExistsByName(ctx context.Context, name string) (bool, error) {
+	exists, err := r.db.NewSelect().
+		Model(&dto.Tag{}).
+		Where("name = ?", name).
+		Exists(ctx)
+	if err != nil {
+		return false, domainerrors.ErrFailedToCheckTagExists
+	}
+	return exists, nil
+}
+
 func (r *TagRepository) FindAllByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.Tag, error) {
 	var dtoTags []*dto.Tag
 	err := r.db.NewSelect().

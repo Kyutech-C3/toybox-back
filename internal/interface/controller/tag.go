@@ -102,6 +102,8 @@ func handleTagError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "タグの取得に失敗しました")
 	case errors.Is(err, domainerrors.ErrTagAlreadyExists):
 		return echo.NewHTTPError(http.StatusConflict, "タグが既に存在します")
+	case errors.Is(err, domainerrors.ErrFailedToCheckTagExists):
+		return echo.NewHTTPError(http.StatusInternalServerError, "タグの重複確認に失敗しました")
 	default:
 		c.Logger().Error("Tag error:", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "サーバーエラーが発生しました")
