@@ -14,7 +14,7 @@ type IFavoriteUsecase interface {
 	CreateFavorite(ctx context.Context, workID uuid.UUID, userID uuid.UUID) error
 	DeleteFavorite(ctx context.Context, workID uuid.UUID, userID uuid.UUID) error
 	CountFavoritesByWorkID(ctx context.Context, workID uuid.UUID) (int, error)
-	IsFavorite(ctx context.Context, workID uuid.UUID, userID uuid.UUID) bool
+	IsFavorite(ctx context.Context, workID uuid.UUID, userID uuid.UUID) (bool, error)
 }
 
 type favoriteUsecase struct {
@@ -39,7 +39,10 @@ func (uc *favoriteUsecase) CreateFavorite(ctx context.Context, workID uuid.UUID,
 	}
 
 	favorite := entity.NewFavorite(workID, userID)
-	exists := uc.favoriteRepo.Exists(ctx, favorite)
+	exists, err := uc.favoriteRepo.Exists(ctx, favorite)
+	if err != nil {
+		return fmt.Errorf("failed to check favorite existence: %w", err)
+	}
 	if exists {
 		return domainerrors.ErrFavoriteAlreadyExists
 	}
@@ -53,7 +56,10 @@ func (uc *favoriteUsecase) CreateFavorite(ctx context.Context, workID uuid.UUID,
 
 func (uc *favoriteUsecase) DeleteFavorite(ctx context.Context, workID uuid.UUID, userID uuid.UUID) error {
 	favorite := entity.NewFavorite(workID, userID)
-	exists := uc.favoriteRepo.Exists(ctx, favorite)
+	exists, err := uc.favoriteRepo.Exists(ctx, favorite)
+	if err != nil {
+		return fmt.Errorf("failed to check favorite existence: %w", err)
+	}
 	if !exists {
 		return domainerrors.ErrFavoriteNotFound
 	}
@@ -68,7 +74,11 @@ func (uc *favoriteUsecase) CountFavoritesByWorkID(ctx context.Context, workID uu
 	return total, nil
 }
 
-func (uc *favoriteUsecase) IsFavorite(ctx context.Context, workID uuid.UUID, userID uuid.UUID) bool {
+func (uc *favoriteUsecase) IsFavorite(ctx context.Context, workID uuid.UUID, userID uuid.UUID) (bool, error) {
 	favorite := entity.NewFavorite(workID, userID)
-	return uc.favoriteRepo.Exists(ctx, favorite)
+	exists, err := uc.favoriteRepo.Exists(ctx, favorite)
+	if err != nil {
+		return false, fmt.Errorf("failed to check favorite existence: %w", err)
+	}
+	return exists, nil
 }

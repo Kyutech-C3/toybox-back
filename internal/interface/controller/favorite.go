@@ -142,7 +142,11 @@ func (fc *FavoriteController) IsFavorite(c echo.Context) error {
 		c.Logger().Error("Invalid user ID:", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid user ID")
 	}
-	isFavorite := fc.favoriteUsecase.IsFavorite(c.Request().Context(), workID, userID)
+	isFavorite, err := fc.favoriteUsecase.IsFavorite(c.Request().Context(), workID, userID)
+	if err != nil {
+		c.Logger().Error("Failed to check favorite:", err)
+		return handleFavoriteError(err)
+	}
 	return c.JSON(http.StatusOK, schema.IsFavoriteResponse{IsFavorite: isFavorite})
 }
 
@@ -161,6 +165,8 @@ func handleFavoriteError(err error) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "いいねの削除に失敗しました")
 	case errors.Is(err, domainerrors.ErrFailedToCountFavoritesByWorkID):
 		return echo.NewHTTPError(http.StatusInternalServerError, "いいねのカウントに失敗しました")
+	case errors.Is(err, domainerrors.ErrFailedToCheckFavoriteExists):
+		return echo.NewHTTPError(http.StatusInternalServerError, "いいね状態の確認に失敗しました")
 	case errors.Is(err, domainerrors.ErrFavoriteAlreadyExists):
 		return echo.NewHTTPError(http.StatusBadRequest, "既にいいねしています")
 	case errors.Is(err, domainerrors.ErrFavoriteNotFound):

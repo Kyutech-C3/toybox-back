@@ -81,6 +81,7 @@ var (
 	ErrFavoriteAlreadyExists          = errors.New("favorite already exists")
 	ErrFavoriteNotFound               = errors.New("favorite not found")
 	ErrFailedToFindFavoritedWorkIDs   = errors.New("failed to find favorited work ids")
+	ErrFailedToCheckFavoriteExists    = errors.New("failed to check favorite existence")
 )
 
 // タグ関連のエラー定義
