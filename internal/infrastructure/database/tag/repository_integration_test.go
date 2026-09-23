@@ -13,6 +13,7 @@ import (
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/dto"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/tag"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/testutil"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/database/work"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 )
@@ -258,4 +259,118 @@ func insertTestTag(t *testing.T, db *bun.DB, name string) uuid.UUID {
 	require.NoError(t, err)
 
 	return tag.ID
+}
+
+func insertTestUser(t *testing.T, db *bun.DB) *entity.User {
+	t.Helper()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	userID := uuid.New()
+	shortID := userID.String()[:8]
+	user := &entity.User{
+		ID:            userID,
+		Name:          "user-" + shortID,
+		Email:         "user-" + shortID + "@example.com",
+		DisplayName:   "User " + shortID,
+		DiscordUserID: "discord-" + shortID,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+
+	dtoUser := dto.ToUserDTO(user)
+	_, err := db.NewInsert().Model(dtoUser).Exec(context.Background())
+	require.NoError(t, err)
+
+	return user
+}
+
+func insertTestAsset(t *testing.T, db *bun.DB, userID uuid.UUID) *entity.Asset {
+	t.Helper()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	asset := &entity.Asset{
+		ID:        uuid.New(),
+		AssetType: "image",
+		UserID:    userID,
+		Extension: "png",
+		URL:       "https://example.com/test.png",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	dtoAsset := dto.ToAssetDTO(asset)
+	_, err := db.NewInsert().Model(dtoAsset).Exec(context.Background())
+	require.NoError(t, err)
+
+	return asset
+}
+
+func newTestWork(userID uuid.UUID, title string) *entity.Work {
+	now := time.Now().UTC().Truncate(time.Second)
+	return &entity.Work{
+		ID:               uuid.New(),
+		Title:            title,
+		Description:      "description",
+		UserID:           userID,
+		Visibility:       "public",
+		ThumbnailAssetID: uuid.Nil,
+		Assets:           []*entity.Asset{},
+		URLs:             []*string{},
+		TagIDs:           []uuid.UUID{},
+		Tags:             []*entity.Tag{},
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+}
+
+func TestTagRepository_CountWorksByTag(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	tagRepo := tag.NewTagRepository(db)
+	workRepo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+
+	publicTagID := insertTestTag(t, db, "count-public")
+	privateTagID := insertTestTag(t, db, "count-private")
+	draftTagID := insertTestTag(t, db, "count-draft")
+	noAssetTagID := insertTestTag(t, db, "count-no-asset")
+	unusedTagID := insertTestTag(t, db, "count-unused")
+
+	createWork := func(visibility string, tagID uuid.UUID, withThumbnail bool) {
+		w := newTestWork(user.ID, "title-"+uuid.NewString())
+		w.Visibility = visibility
+		w.TagIDs = []uuid.UUID{tagID}
+		if withThumbnail {
+			thumbnailAsset := insertTestAsset(t, db, user.ID)
+			w.ThumbnailAssetID = thumbnailAsset.ID
+		}
+		_, err := workRepo.Create(ctx, w)
+		require.NoError(t, err)
+	}
+
+	createWork("public", publicTagID, true)
+	createWork("private", privateTagID, true)
+	createWork("draft", draftTagID, true)
+	createWork("public", noAssetTagID, false) // asset不在の不完全な作品
+
+	t.Run("未認証: publicかつasset有りの作品のみカウントされる", func(t *testing.T) {
+		counts, err := tagRepo.CountWorksByTag(ctx, false)
+		require.NoError(t, err)
+		require.Equal(t, 1, counts[publicTagID])
+		require.Equal(t, 0, counts[privateTagID])
+		require.Equal(t, 0, counts[draftTagID])
+		require.Equal(t, 0, counts[noAssetTagID])
+		require.Equal(t, 0, counts[unusedTagID])
+	})
+
+	t.Run("認証あり: private込みでカウントされるがdraftとasset不在は対象外", func(t *testing.T) {
+		counts, err := tagRepo.CountWorksByTag(ctx, true)
+		require.NoError(t, err)
+		require.Equal(t, 1, counts[publicTagID])
+		require.Equal(t, 1, counts[privateTagID])
+		require.Equal(t, 0, counts[draftTagID])
+		require.Equal(t, 0, counts[noAssetTagID])
+		require.Equal(t, 0, counts[unusedTagID])
+	})
 }

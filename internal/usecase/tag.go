@@ -12,7 +12,7 @@ import (
 
 type ITagUseCase interface {
 	Create(ctx context.Context, name string) (*entity.Tag, error)
-	GetAll(ctx context.Context) ([]*entity.Tag, error)
+	GetAll(ctx context.Context, authenticated bool) ([]*entity.Tag, error)
 }
 
 type tagUseCase struct {
@@ -46,10 +46,19 @@ func (uc *tagUseCase) Create(ctx context.Context, name string) (*entity.Tag, err
 	return createdTag, nil
 }
 
-func (uc *tagUseCase) GetAll(ctx context.Context) ([]*entity.Tag, error) {
+func (uc *tagUseCase) GetAll(ctx context.Context, authenticated bool) ([]*entity.Tag, error) {
 	tags, err := uc.tagRepo.FindAll(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	counts, err := uc.tagRepo.CountWorksByTag(ctx, authenticated)
+	if err != nil {
+		return nil, err
+	}
+	for _, tag := range tags {
+		tag.WorkCount = counts[tag.ID]
+	}
+
 	return tags, nil
 }

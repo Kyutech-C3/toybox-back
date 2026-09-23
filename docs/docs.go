@@ -679,6 +679,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagListResponse"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1422,6 +1428,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "work_count": {
+                    "type": "integer"
                 }
             }
         },

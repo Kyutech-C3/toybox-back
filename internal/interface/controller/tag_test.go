@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
@@ -23,16 +24,19 @@ import (
 
 func TestTagController_GetAllTags(t *testing.T) {
 	now := time.Now()
+	userID := uuid.New()
 	mockTags := []*entity.Tag{
 		{
 			ID:        uuid.New(),
 			Name:      "Go",
+			WorkCount: 3,
 			CreatedAt: now,
 			UpdatedAt: now,
 		},
 		{
 			ID:        uuid.New(),
 			Name:      "Rust",
+			WorkCount: 0,
 			CreatedAt: now,
 			UpdatedAt: now,
 		},
@@ -40,42 +44,71 @@ func TestTagController_GetAllTags(t *testing.T) {
 	successResponseBytes, _ := json.Marshal(schema.ToTagListResponse(mockTags))
 	emptyResponseBytes, _ := json.Marshal(schema.ToTagListResponse([]*entity.Tag{}))
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "タグの取得に失敗しました"})
+	badRequestResponseBytes, _ := json.Marshal(map[string]string{"message": "無効なリクエストボディです"})
 
 	tests := []struct {
 		name       string
+		withAuth   bool
+		claimsUser string
 		setupMock  func(mockTagUsecase *mock.MockITagUseCase)
 		wantStatus int
 		wantBody   []byte
 	}{
 		{
-			name: "正常系: タグ一覧取得成功",
+			name:       "正常系: 認証なし（publicのみの件数）",
+			withAuth:   false,
+			claimsUser: "",
 			setupMock: func(mockTagUsecase *mock.MockITagUseCase) {
 				mockTagUsecase.EXPECT().
-					GetAll(gomock.Any()).
+					GetAll(gomock.Any(), false).
 					Return(mockTags, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
 		},
 		{
-			name: "正常系: タグが0件",
+			name:       "正常系: 認証あり（private込みの件数）",
+			withAuth:   true,
+			claimsUser: userID.String(),
 			setupMock: func(mockTagUsecase *mock.MockITagUseCase) {
 				mockTagUsecase.EXPECT().
-					GetAll(gomock.Any()).
+					GetAll(gomock.Any(), true).
+					Return(mockTags, nil)
+			},
+			wantStatus: http.StatusOK,
+			wantBody:   successResponseBytes,
+		},
+		{
+			name:       "正常系: タグが0件",
+			withAuth:   false,
+			claimsUser: "",
+			setupMock: func(mockTagUsecase *mock.MockITagUseCase) {
+				mockTagUsecase.EXPECT().
+					GetAll(gomock.Any(), false).
 					Return([]*entity.Tag{}, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   emptyResponseBytes,
 		},
 		{
-			name: "異常系: Usecaseエラー",
+			name:       "異常系: Usecaseエラー",
+			withAuth:   false,
+			claimsUser: "",
 			setupMock: func(mockTagUsecase *mock.MockITagUseCase) {
 				mockTagUsecase.EXPECT().
-					GetAll(gomock.Any()).
+					GetAll(gomock.Any(), false).
 					Return(nil, domainerrors.ErrFailedToGetAllTags)
 			},
 			wantStatus: http.StatusInternalServerError,
 			wantBody:   internalErrorResponseBytes,
+		},
+		{
+			name:       "異常系: トークンのUserIDが不正",
+			withAuth:   true,
+			claimsUser: "invalid-uuid",
+			setupMock:  func(mockTagUsecase *mock.MockITagUseCase) {},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   badRequestResponseBytes,
 		},
 	}
 
@@ -89,7 +122,15 @@ func TestTagController_GetAllTags(t *testing.T) {
 			tt.setupMock(mockUsecase)
 
 			tagController := controller.NewTagController(mockUsecase)
-			e.GET("/tags", tagController.GetAllTags)
+			e.GET("/tags", func(c echo.Context) error {
+				if tt.withAuth {
+					token := jwt.NewWithClaims(jwt.SigningMethodHS256, &schema.JWTCustomClaims{
+						UserID: tt.claimsUser,
+					})
+					c.Set("user", token)
+				}
+				return tagController.GetAllTags(c)
+			})
 
 			req := httptest.NewRequest(http.MethodGet, "/tags", nil)
 			rec := httptest.NewRecorder()

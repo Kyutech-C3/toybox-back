@@ -42,6 +42,21 @@ func (m *MockTagRepository) EXPECT() *MockTagRepositoryMockRecorder {
 	return m.recorder
 }
 
+// CountWorksByTag mocks base method.
+func (m *MockTagRepository) CountWorksByTag(ctx context.Context, includePrivate bool) (map[uuid.UUID]int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountWorksByTag", ctx, includePrivate)
+	ret0, _ := ret[0].(map[uuid.UUID]int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountWorksByTag indicates an expected call of CountWorksByTag.
+func (mr *MockTagRepositoryMockRecorder) CountWorksByTag(ctx, includePrivate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountWorksByTag", reflect.TypeOf((*MockTagRepository)(nil).CountWorksByTag), ctx, includePrivate)
+}
+
 // Create mocks base method.
 func (m *MockTagRepository) Create(ctx context.Context, tag *entity.Tag) (*entity.Tag, error) {
 	m.ctrl.T.Helper()

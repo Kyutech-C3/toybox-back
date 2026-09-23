@@ -12,6 +12,7 @@ import (
 type Tag struct {
 	ID        uuid.UUID
 	Name      string
+	WorkCount int
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

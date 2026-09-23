@@ -16,6 +16,7 @@ type CreateTagInput struct {
 type TagDetailResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Name      string    `json:"name"`
+	WorkCount int       `json:"work_count"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -29,6 +30,7 @@ func ToTagDetailResponse(tag *entity.Tag) TagDetailResponse {
 	return TagDetailResponse{
 		ID:        tag.ID,
 		Name:      tag.Name,
+		WorkCount: tag.WorkCount,
 		CreatedAt: tag.CreatedAt,
 		UpdatedAt: tag.UpdatedAt,
 	}
