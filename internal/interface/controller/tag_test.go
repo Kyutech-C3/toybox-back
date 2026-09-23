@@ -161,6 +161,8 @@ func TestTagController_CreateTag(t *testing.T) {
 	invalidTagNameResponseBytes, _ := json.Marshal(map[string]string{"message": "タグ名が無効です"})
 	failedToCreateResponseBytes, _ := json.Marshal(map[string]string{"message": "タグの作成に失敗しました"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
+	tagAlreadyExistsResponseBytes, _ := json.Marshal(map[string]string{"message": "タグが既に存在します"})
+	checkExistsFailedResponseBytes, _ := json.Marshal(map[string]string{"message": "タグの重複確認に失敗しました"})
 
 	tests := []struct {
 		name       string
@@ -204,6 +206,28 @@ func TestTagController_CreateTag(t *testing.T) {
 			},
 			wantStatus: http.StatusBadRequest,
 			wantBody:   invalidTagNameResponseBytes,
+		},
+		{
+			name: "異常系: 既に存在するタグ名",
+			body: inputJSON,
+			setupMock: func(mockTagUsecase *mock.MockITagUseCase) {
+				mockTagUsecase.EXPECT().
+					Create(gomock.Any(), "Go").
+					Return(nil, domainerrors.ErrTagAlreadyExists)
+			},
+			wantStatus: http.StatusConflict,
+			wantBody:   tagAlreadyExistsResponseBytes,
+		},
+		{
+			name: "異常系: 重複確認に失敗",
+			body: inputJSON,
+			setupMock: func(mockTagUsecase *mock.MockITagUseCase) {
+				mockTagUsecase.EXPECT().
+					Create(gomock.Any(), "Go").
+					Return(nil, domainerrors.ErrFailedToCheckTagExists)
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantBody:   checkExistsFailedResponseBytes,
 		},
 		{
 			name: "異常系: タグ作成失敗",

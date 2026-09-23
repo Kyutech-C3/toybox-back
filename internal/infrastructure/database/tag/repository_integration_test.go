@@ -205,6 +205,39 @@ func TestTagRepository_Create(t *testing.T) {
 	}
 }
 
+func TestTagRepository_ExistsByName(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := tag.NewTagRepository(db)
+
+	ctx := context.Background()
+	insertTestTag(t, db, "go")
+
+	tests := []struct {
+		name    string
+		tagName string
+		want    bool
+	}{
+		{
+			name:    "正常系: 既存のタグ名と一致する",
+			tagName: "go",
+			want:    true,
+		},
+		{
+			name:    "正常系: 一致するタグがない",
+			tagName: "rust",
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			exists, err := repo.ExistsByName(ctx, tt.tagName)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, exists)
+		})
+	}
+}
+
 func TestTagRepository_FindAll(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := tag.NewTagRepository(db)

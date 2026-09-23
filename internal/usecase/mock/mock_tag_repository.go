@@ -87,6 +87,21 @@ func (mr *MockTagRepositoryMockRecorder) ExistAll(ctx, ids any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistAll", reflect.TypeOf((*MockTagRepository)(nil).ExistAll), ctx, ids)
 }
 
+// ExistsByName mocks base method.
+func (m *MockTagRepository) ExistsByName(ctx context.Context, name string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExistsByName", ctx, name)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExistsByName indicates an expected call of ExistsByName.
+func (mr *MockTagRepositoryMockRecorder) ExistsByName(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsByName", reflect.TypeOf((*MockTagRepository)(nil).ExistsByName), ctx, name)
+}
+
 // FindAll mocks base method.
 func (m *MockTagRepository) FindAll(ctx context.Context) ([]*entity.Tag, error) {
 	m.ctrl.T.Helper()
