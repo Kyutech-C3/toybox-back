@@ -13,7 +13,7 @@ import (
 
 type IWorkUseCase interface {
 	GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
-	GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error)
+	GetByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entity.Work, error)
 	GetByUserID(ctx context.Context, limit, page *int, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
 	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error)
 	UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID, collaboratorIDs *[]uuid.UUID) (*entity.Work, error)
@@ -93,11 +93,23 @@ func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid
 	return works, total, actualLimit, actualPage, favoritedWorkIDs, nil
 }
 
-func (uc *workUseCase) GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+func (uc *workUseCase) GetByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entity.Work, error) {
 	work, err := uc.workRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get work by ID %s: %w", id.String(), err)
 	}
+
+	switch work.Visibility {
+	case "draft":
+		if work.UserID != userID {
+			return nil, domainerrors.ErrWorkNotViewable
+		}
+	case "private":
+		if userID == uuid.Nil {
+			return nil, domainerrors.ErrWorkNotViewable
+		}
+	}
+
 	return work, nil
 }
 

@@ -91,18 +91,18 @@ func (mr *MockIWorkUseCaseMockRecorder) GetAll(ctx, limit, page, userID, tagIDs 
 }
 
 // GetByID mocks base method.
-func (m *MockIWorkUseCase) GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+func (m *MockIWorkUseCase) GetByID(ctx context.Context, id, userID uuid.UUID) (*entity.Work, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, userID)
 	ret0, _ := ret[0].(*entity.Work)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockIWorkUseCaseMockRecorder) GetByID(ctx, id any) *gomock.Call {
+func (mr *MockIWorkUseCaseMockRecorder) GetByID(ctx, id, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockIWorkUseCase)(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockIWorkUseCase)(nil).GetByID), ctx, id, userID)
 }
 
 // GetByUserID mocks base method.

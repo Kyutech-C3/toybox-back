@@ -105,9 +105,11 @@ func (wc *WorkController) GetAllWorks(c echo.Context) error {
 // @Param work_id path string true "Work ID"
 // @Success 200 {object} schema.GetWorkOutput
 // @Failure 400 {object} echo.HTTPError
+// @Failure 403 {object} echo.HTTPError
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /works/{work_id} [get]
+// @Security BearerAuth
 func (wc *WorkController) GetWorkByID(c echo.Context) error {
 	idStr := c.Param("work_id")
 	id, err := uuid.Parse(idStr)
@@ -115,7 +117,20 @@ func (wc *WorkController) GetWorkByID(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
 	}
 
-	work, err := wc.workUsecase.GetByID(c.Request().Context(), id)
+	rawUser := c.Get("user")
+	var userID uuid.UUID
+	if rawUser == nil {
+		userID = uuid.Nil
+	} else {
+		user := rawUser.(*jwt.Token)
+		claims := user.Claims.(*schema.JWTCustomClaims)
+		userID, err = uuid.Parse(claims.UserID)
+		if err != nil {
+			return handleWorkError(c, domainerrors.ErrInvalidRequestBody)
+		}
+	}
+
+	work, err := wc.workUsecase.GetByID(c.Request().Context(), id, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "Work not found")
@@ -362,6 +377,8 @@ func handleWorkError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "作品のオーナーを共同制作者として追加することはできません")
 	case errors.Is(err, domainerrors.ErrWorkNotOwnedByUser):
 		return echo.NewHTTPError(http.StatusForbidden, "この作品を削除する権限がありません")
+	case errors.Is(err, domainerrors.ErrWorkNotViewable):
+		return echo.NewHTTPError(http.StatusForbidden, "この作品を閲覧する権限がありません")
 	case errors.Is(err, domainerrors.ErrFailedToDeleteWork):
 		return echo.NewHTTPError(http.StatusInternalServerError, "作品の削除に失敗しました")
 	case errors.Is(err, domainerrors.ErrFailedToDeleteAsset):

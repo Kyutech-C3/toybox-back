@@ -92,8 +92,7 @@ func (r *Router) Setup() *echo.Echo {
 
 	o.GET("", r.WorkController.GetAllWorks)
 	o.GET("/users/:user_id", r.WorkController.GetWorksByUserID)
-
-	r.echo.GET("/works/:work_id", r.WorkController.GetWorkByID)
+	o.GET("/:work_id", r.WorkController.GetWorkByID)
 
 	// Comment
 	o.GET("/:work_id/comments", r.CommentController.GetCommentsByWorkID)
