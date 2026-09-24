@@ -705,8 +705,13 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					}, nil).
 					Times(1)
 			},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
-			wantErr:        false,
+			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(true, nil).
+					Times(1)
+			},
+			wantErr: false,
 		},
 		{
 			name:             "異常系: バリデーションエラー(タイトル空)",
@@ -834,8 +839,13 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Return([]*entity.Tag{{ID: tagIDs[0], Name: "Tag1"}}, nil).
 					Times(1)
 			},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
-			wantErr:        true,
+			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(true, nil).
+					Times(1)
+			},
+			wantErr: true,
 		},
 	}
 
@@ -1005,6 +1015,10 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			},
 			setupTagMock: func(m *mock.MockTagRepository) {},
 			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(true, nil).
+					Times(1)
 				m.EXPECT().DeleteFile(gomock.Any(), "http://removed-asset.url").Return(nil).Times(1)
 			},
 			wantErr: false,
@@ -1020,6 +1034,10 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			},
 			setupTagMock: func(m *mock.MockTagRepository) {},
 			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(true, nil).
+					Times(1)
 				m.EXPECT().DeleteFile(gomock.Any(), "http://removed-asset.url").Return(errors.New("s3 error")).Times(1)
 			},
 			wantErr: true,
@@ -1208,7 +1226,12 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 				m.EXPECT().ExistAll(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return(true, nil).Times(1)
 				m.EXPECT().FindAllByIDs(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return([]*entity.Tag{{ID: tagID, Name: "Tag1"}}, nil).Times(1)
 			},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(true, nil).
+					Times(1)
+			},
 			setupUserMock: func(m *mock.MockUserRepository) {
 				m.EXPECT().GetByID(gomock.Any(), collaborator1ID).Return(&entity.User{ID: collaborator1ID, DisplayName: "Collaborator1"}, nil).Times(1)
 				m.EXPECT().GetByID(gomock.Any(), collaborator2ID).Return(&entity.User{ID: collaborator2ID, DisplayName: "Collaborator2"}, nil).Times(1)
@@ -1261,7 +1284,12 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 				m.EXPECT().ExistAll(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return(true, nil).Times(1)
 				m.EXPECT().FindAllByIDs(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return([]*entity.Tag{{ID: tagID, Name: "Tag1"}}, nil).Times(1)
 			},
-			setupAssetMock:    func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(true, nil).
+					Times(1)
+			},
 			setupUserMock:     func(m *mock.MockUserRepository) {},
 			wantErr:           false,
 			wantCollaborators: 0,

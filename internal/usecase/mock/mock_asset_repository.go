@@ -72,6 +72,21 @@ func (mr *MockAssetRepositoryMockRecorder) DeleteFile(ctx, url any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFile", reflect.TypeOf((*MockAssetRepository)(nil).DeleteFile), ctx, url)
 }
 
+// ExistAllByUserID mocks base method.
+func (m *MockAssetRepository) ExistAllByUserID(ctx context.Context, ids []uuid.UUID, userID uuid.UUID) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExistAllByUserID", ctx, ids, userID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExistAllByUserID indicates an expected call of ExistAllByUserID.
+func (mr *MockAssetRepositoryMockRecorder) ExistAllByUserID(ctx, ids, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistAllByUserID", reflect.TypeOf((*MockAssetRepository)(nil).ExistAllByUserID), ctx, ids, userID)
+}
+
 // UploadAvatar mocks base method.
 func (m *MockAssetRepository) UploadAvatar(ctx context.Context, discordUserID, avatarHash string) (*string, error) {
 	m.ctrl.T.Helper()
