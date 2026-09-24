@@ -13,4 +13,5 @@ type AssetRepository interface {
 	UploadFile(ctx context.Context, file *multipart.FileHeader, assetUUID uuid.UUID, extension string) (assetURL *string, assetType *string, err error)
 	UploadAvatar(ctx context.Context, discordUserID string, avatarHash string) (avatarURL *string, err error)
 	DeleteFile(ctx context.Context, url string) error
+	ExistAllByUserID(ctx context.Context, ids []uuid.UUID, userID uuid.UUID) (bool, error)
 }

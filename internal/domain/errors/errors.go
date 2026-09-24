@@ -72,6 +72,7 @@ var (
 	ErrFailedToUploadFile  = errors.New("failed to upload file")
 	ErrFailedToCreateAsset = errors.New("failed to create asset")
 	ErrFailedToDeleteAsset = errors.New("failed to delete asset")
+	ErrAssetNotFound       = errors.New("asset not found")
 )
 
 // いいね関連のエラー定義

@@ -352,6 +352,8 @@ func handleWorkError(c echo.Context, err error) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "作品の更新に失敗しました")
 	case errors.Is(err, domainerrors.ErrTagNotFound):
 		return echo.NewHTTPError(http.StatusBadRequest, "存在しないタグIDが含まれています")
+	case errors.Is(err, domainerrors.ErrAssetNotFound):
+		return echo.NewHTTPError(http.StatusBadRequest, "存在しないアセットIDが含まれています")
 	case errors.Is(err, domainerrors.ErrInvalidTagIDs):
 		return echo.NewHTTPError(http.StatusBadRequest, "タグが指定されていません")
 	case errors.Is(err, domainerrors.ErrInvalidThumbnailAssetID):
