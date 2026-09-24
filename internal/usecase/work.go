@@ -227,29 +227,32 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 	if visibility != nil {
 		work.Visibility = *visibility
 	}
-	if thumbnailAssetID != nil {
-		if *thumbnailAssetID == uuid.Nil {
-			return nil, domainerrors.ErrInvalidThumbnailAssetID
-		}
-		ownsThumbnail, err := uc.assetRepo.ExistAllByUserID(ctx, []uuid.UUID{*thumbnailAssetID}, userID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to check asset ownership: %w", err)
-		}
-		if !ownsThumbnail {
-			return nil, domainerrors.ErrAssetNotFound
-		}
-		work.ThumbnailAssetID = *thumbnailAssetID
+	if thumbnailAssetID != nil && *thumbnailAssetID == uuid.Nil {
+		return nil, domainerrors.ErrInvalidThumbnailAssetID
 	}
-	var removedAssets []*entity.Asset
+
+	verifyAssetIDs := make([]uuid.UUID, 0, 1)
+	if thumbnailAssetID != nil {
+		verifyAssetIDs = append(verifyAssetIDs, *thumbnailAssetID)
+	}
 	if assetIDs != nil {
-		ownsAllAssets, err := uc.assetRepo.ExistAllByUserID(ctx, *assetIDs, userID)
+		verifyAssetIDs = append(verifyAssetIDs, *assetIDs...)
+	}
+	if len(verifyAssetIDs) > 0 {
+		ownsAllAssets, err := uc.assetRepo.ExistAllByUserID(ctx, verifyAssetIDs, userID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check asset ownership: %w", err)
 		}
 		if !ownsAllAssets {
 			return nil, domainerrors.ErrAssetNotFound
 		}
+	}
 
+	if thumbnailAssetID != nil {
+		work.ThumbnailAssetID = *thumbnailAssetID
+	}
+	var removedAssets []*entity.Asset
+	if assetIDs != nil {
 		for _, oldAsset := range work.Assets {
 			if oldAsset.ID != work.ThumbnailAssetID && !slices.Contains(*assetIDs, oldAsset.ID) {
 				removedAssets = append(removedAssets, oldAsset)
