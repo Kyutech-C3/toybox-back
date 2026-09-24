@@ -12,7 +12,7 @@ import (
 )
 
 type ICommentUsecase interface {
-	GetCommentsByWorkID(ctx context.Context, workID uuid.UUID) ([]*entity.Comment, error)
+	GetCommentsByWorkID(ctx context.Context, workID uuid.UUID, userID uuid.UUID) ([]*entity.Comment, error)
 	CreateComment(ctx context.Context, content string, workID, userID uuid.UUID, replyAt string) (*entity.Comment, error)
 }
 
@@ -30,9 +30,17 @@ func NewCommentUsecase(commentRepo repository.CommentRepository, workRepo reposi
 	}
 }
 
-func (uc *commentUsecase) GetCommentsByWorkID(ctx context.Context, workID uuid.UUID) ([]*entity.Comment, error) {
+func (uc *commentUsecase) GetCommentsByWorkID(ctx context.Context, workID uuid.UUID, userID uuid.UUID) ([]*entity.Comment, error) {
 	ctx, cancel := context.WithTimeout(ctx, uc.timeout)
 	defer cancel()
+
+	work, err := uc.workRepo.GetByID(ctx, workID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get work by ID %s: %w", workID.String(), err)
+	}
+	if !canViewWork(work, userID) {
+		return nil, domainerrors.ErrWorkNotViewable
+	}
 
 	comments, err := uc.commentRepo.FindByWorkID(ctx, workID)
 	if err != nil {
@@ -53,13 +61,12 @@ func (uc *commentUsecase) CreateComment(ctx context.Context, content string, wor
 		return nil, fmt.Errorf("content is required")
 	}
 
-	// Workの存在確認
-	exists, err := uc.workRepo.ExistsById(ctx, workID)
+	work, err := uc.workRepo.GetByID(ctx, workID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check work existence: %w", err)
+		return nil, fmt.Errorf("failed to get work by ID %s: %w", workID.String(), err)
 	}
-	if !exists {
-		return nil, domainerrors.ErrWorkNotFound
+	if !canViewWork(work, userID) {
+		return nil, domainerrors.ErrWorkNotViewable
 	}
 
 	// replyAtがある場合は返信先にコメントが存在するか確認
@@ -84,4 +91,15 @@ func (uc *commentUsecase) CreateComment(ctx context.Context, content string, wor
 	}
 
 	return createdComment, nil
+}
+
+func canViewWork(work *entity.Work, userID uuid.UUID) bool {
+	switch work.Visibility {
+	case "public":
+		return true
+	case "private":
+		return userID != uuid.Nil
+	default:
+		return false
+	}
 }

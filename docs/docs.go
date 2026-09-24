@@ -1218,6 +1218,11 @@ const docTemplate = `{
         },
         "/works/{work_id}/comments": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get all comments for a specific work",
                 "produces": [
                     "application/json"
@@ -1251,6 +1256,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/echo.HTTPError"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -1266,6 +1277,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new comment for a specific work. Can be anonymous or by a logged-in user.",
                 "consumes": [
                     "application/json"
@@ -1304,6 +1320,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/echo.HTTPError"
                         }
@@ -1416,9 +1438,6 @@ const docTemplate = `{
                     "maxLength": 255
                 },
                 "reply_at": {
-                    "type": "string"
-                },
-                "user_id": {
                     "type": "string"
                 }
             }
