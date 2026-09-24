@@ -25,7 +25,6 @@ type CommentResponse struct {
 type CreateCommentRequest struct {
 	Content string `json:"content" validate:"required,max=255"`
 	ReplyAt string `json:"reply_at" validate:"omitempty,uuid"`
-	UserID  string `json:"user_id" validate:"omitempty,uuid"`
 }
 
 type CreateCommentResponse struct {

@@ -84,8 +84,8 @@ func (r *Router) Setup() *echo.Echo {
 	r.echo.GET("/works/:work_id", r.WorkController.GetWorkByID)
 
 	// Comment
-	r.echo.GET("/works/:work_id/comments", r.CommentController.GetCommentsByWorkID)
-	r.echo.POST("/works/:work_id/comments", r.CommentController.CreateComment)
+	o.GET("/:work_id/comments", r.CommentController.GetCommentsByWorkID)
+	o.POST("/:work_id/comments", r.CommentController.CreateComment)
 
 	// Favorite
 	r.echo.GET("/works/:work_id/favorite", r.FavoriteController.CountFavoritesByWorkID)
