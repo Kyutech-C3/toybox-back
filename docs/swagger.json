@@ -9,6 +9,255 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/v1/blogs": {
+            "get": {
+                "description": "Temporary read-only pass-through to the legacy ToyBox API. The response schema is owned by the legacy service.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-proxy"
+                ],
+                "summary": "Get blogs from the legacy API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Visibility filter",
+                        "name": "visibility",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of blogs",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Disable pagination",
+                        "name": "disable_pagination",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/blogs/{blog_id}": {
+            "get": {
+                "description": "Temporary read-only pass-through to the legacy ToyBox API. The response schema is owned by the legacy service.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-proxy"
+                ],
+                "summary": "Get a blog from the legacy API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Blog ID",
+                        "name": "blog_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/works": {
+            "get": {
+                "description": "Temporary read-only pass-through to the legacy ToyBox API. The response schema is owned by the legacy service.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-proxy"
+                ],
+                "summary": "Get works from the legacy API (v1)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of works",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Visibility filter",
+                        "name": "visibility",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Oldest work cursor",
+                        "name": "oldest_work_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Newest work cursor",
+                        "name": "newest_work_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tag names",
+                        "name": "tag_names",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tag IDs",
+                        "name": "tag_ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search text",
+                        "name": "search_word",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/works": {
+            "get": {
+                "description": "Temporary read-only pass-through to the legacy ToyBox API. The response schema is owned by the legacy service.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-proxy"
+                ],
+                "summary": "Get works from the legacy API (v2)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of works",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Visibility filter",
+                        "name": "visibility",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tag names",
+                        "name": "tag_names",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tag IDs",
+                        "name": "tag_ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search text",
+                        "name": "search_word",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/discord": {
             "get": {
                 "description": "Get Discord authentication URL",
@@ -1405,6 +1654,14 @@
             "properties": {
                 "is_favorite": {
                     "type": "boolean"
+                }
+            }
+        },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
                 }
             }
         },
