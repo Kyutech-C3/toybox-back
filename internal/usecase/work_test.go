@@ -669,7 +669,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 		tagIDs           []uuid.UUID
 		setupWorkMock    func(*mock.MockWorkRepository)
 		setupTagMock     func(*mock.MockTagRepository, []uuid.UUID)
-		setupAssetMock   func(*mock.MockAssetRepository)
+		setupAssetMock   func(*mock.MockAssetRepository, uuid.UUID, []uuid.UUID, uuid.UUID)
 		wantErr          bool
 	}{
 		{
@@ -705,8 +705,13 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					}, nil).
 					Times(1)
 			},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
-			wantErr:        false,
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+			},
+			wantErr: false,
 		},
 		{
 			name:             "異常系: バリデーションエラー(タイトル空)",
@@ -724,7 +729,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Times(0)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
 			wantErr:        true,
 		},
 		{
@@ -743,7 +748,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Times(0)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
 			wantErr:        true,
 		},
 		{
@@ -762,7 +767,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Times(0)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
 			wantErr:        true,
 		},
 		{
@@ -781,7 +786,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Times(0)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
 			wantErr:        true,
 		},
 		{
@@ -805,7 +810,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Return(false, nil).
 					Times(1)
 			},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
 			wantErr:        true,
 		},
 		{
@@ -834,8 +839,46 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Return([]*entity.Tag{{ID: tagIDs[0], Name: "Tag1"}}, nil).
 					Times(1)
 			},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
-			wantErr:        true,
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+			},
+			wantErr: true,
+		},
+		{
+			name:             "異常系: 所有していないアセットIDが含まれる",
+			title:            "New Work",
+			description:      "New Description",
+			visibility:       "public",
+			thumbnailAssetID: uuid.New(),
+			assetIDs:         []uuid.UUID{uuid.New()},
+			urls:             []string{"https://example.com"},
+			userID:           uuid.New(),
+			tagIDs:           []uuid.UUID{uuid.New()},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {
+				m.EXPECT().
+					ExistAll(gomock.Any(), gomock.Eq(tagIDs)).
+					Return(true, nil).
+					Times(1)
+				m.EXPECT().
+					FindAllByIDs(gomock.Any(), gomock.Eq(tagIDs)).
+					Return([]*entity.Tag{{ID: tagIDs[0], Name: "Tag1"}}, nil).
+					Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
+					Return(false, nil).
+					Times(1)
+			},
+			wantErr: true,
 		},
 	}
 
@@ -852,7 +895,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo, tt.tagIDs)
-			tt.setupAssetMock(mockAssetRepo)
+			tt.setupAssetMock(mockAssetRepo, tt.thumbnailAssetID, tt.assetIDs, tt.userID)
 
 			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 			got, err := uc.CreateWork(context.Background(), tt.title, tt.description, tt.visibility, tt.thumbnailAssetID, tt.assetIDs, tt.urls, tt.userID, tt.tagIDs, []uuid.UUID{})
@@ -920,7 +963,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 		assetIDs       *[]uuid.UUID
 		setupWorkMock  func(*mock.MockWorkRepository)
 		setupTagMock   func(*mock.MockTagRepository)
-		setupAssetMock func(*mock.MockAssetRepository)
+		setupAssetMock func(*mock.MockAssetRepository, *[]uuid.UUID, uuid.UUID)
 		wantErr        bool
 		wantErrMsg     error
 	}{
@@ -935,7 +978,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
 			wantErr:        false,
 		},
 		{
@@ -949,7 +992,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
 			wantErr:        false,
 		},
 		{
@@ -962,7 +1005,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(nil, domainerrors.ErrWorkNotFound).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
 			wantErr:        true,
 			wantErrMsg:     domainerrors.ErrWorkNotFound,
 		},
@@ -976,7 +1019,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(initialWork, nil).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
 			wantErr:        true,
 			wantErrMsg:     domainerrors.ErrWorkNotOwnedByUser,
 		},
@@ -991,7 +1034,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error")).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
 			wantErr:        true,
 		},
 		{
@@ -1004,7 +1047,11 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
 			},
 			setupTagMock: func(m *mock.MockTagRepository) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(*assetIDs), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
 				m.EXPECT().DeleteFile(gomock.Any(), "http://removed-asset.url").Return(nil).Times(1)
 			},
 			wantErr: false,
@@ -1019,10 +1066,32 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
 			},
 			setupTagMock: func(m *mock.MockTagRepository) {},
-			setupAssetMock: func(m *mock.MockAssetRepository) {
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(*assetIDs), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
 				m.EXPECT().DeleteFile(gomock.Any(), "http://removed-asset.url").Return(errors.New("s3 error")).Times(1)
 			},
 			wantErr: true,
+		},
+		{
+			name:     "異常系: 所有していないアセットIDが含まれる",
+			workID:   workID,
+			userID:   userID,
+			assetIDs: &[]uuid.UUID{uuid.New()},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithAssets(), nil).Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(*assetIDs), gomock.Eq(userID)).
+					Return(false, nil).
+					Times(1)
+			},
+			wantErr:    true,
+			wantErrMsg: domainerrors.ErrAssetNotFound,
 		},
 	}
 
@@ -1039,7 +1108,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
-			tt.setupAssetMock(mockAssetRepo)
+			tt.setupAssetMock(mockAssetRepo, tt.assetIDs, tt.userID)
 
 			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, nil, tt.assetIDs, nil, nil, nil)
@@ -1178,6 +1247,8 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 	collaborator1ID := uuid.New()
 	collaborator2ID := uuid.New()
 	tagID := uuid.New()
+	thumbnailAssetID := uuid.New()
+	assetID := uuid.New()
 
 	tests := []struct {
 		name              string
@@ -1208,7 +1279,12 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 				m.EXPECT().ExistAll(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return(true, nil).Times(1)
 				m.EXPECT().FindAllByIDs(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return([]*entity.Tag{{ID: tagID, Name: "Tag1"}}, nil).Times(1)
 			},
-			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq([]uuid.UUID{thumbnailAssetID, assetID}), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+			},
 			setupUserMock: func(m *mock.MockUserRepository) {
 				m.EXPECT().GetByID(gomock.Any(), collaborator1ID).Return(&entity.User{ID: collaborator1ID, DisplayName: "Collaborator1"}, nil).Times(1)
 				m.EXPECT().GetByID(gomock.Any(), collaborator2ID).Return(&entity.User{ID: collaborator2ID, DisplayName: "Collaborator2"}, nil).Times(1)
@@ -1261,7 +1337,12 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 				m.EXPECT().ExistAll(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return(true, nil).Times(1)
 				m.EXPECT().FindAllByIDs(gomock.Any(), gomock.Eq([]uuid.UUID{tagID})).Return([]*entity.Tag{{ID: tagID, Name: "Tag1"}}, nil).Times(1)
 			},
-			setupAssetMock:    func(m *mock.MockAssetRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq([]uuid.UUID{thumbnailAssetID, assetID}), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+			},
 			setupUserMock:     func(m *mock.MockUserRepository) {},
 			wantErr:           false,
 			wantCollaborators: 0,
@@ -1285,7 +1366,7 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 			tt.setupUserMock(mockUserRepo)
 
 			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
-			got, err := uc.CreateWork(context.Background(), "Title", "Description", "public", uuid.New(), []uuid.UUID{uuid.New()}, []string{"https://example.com"}, userID, []uuid.UUID{tagID}, tt.collaboratorIDs)
+			got, err := uc.CreateWork(context.Background(), "Title", "Description", "public", thumbnailAssetID, []uuid.UUID{assetID}, []string{"https://example.com"}, userID, []uuid.UUID{tagID}, tt.collaboratorIDs)
 
 			if tt.wantErr {
 				assert.Error(t, err)

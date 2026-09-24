@@ -179,6 +179,29 @@ func (r *AssetRepository) UploadAvatar(ctx context.Context, discordUserID string
 	return &newAvatarURL, nil
 }
 
+func (r *AssetRepository) ExistAllByUserID(ctx context.Context, ids []uuid.UUID, userID uuid.UUID) (bool, error) {
+	if len(ids) == 0 {
+		return true, nil
+	}
+
+	// 重複を除くことで総数が一致するようにする
+	uniqueIDs := make(map[uuid.UUID]struct{}, len(ids))
+	for _, id := range ids {
+		uniqueIDs[id] = struct{}{}
+	}
+
+	count, err := r.db.NewSelect().
+		Model(&dto.Asset{}).
+		Where("id IN (?)", bun.In(ids)).
+		Where("user_id = ?", userID).
+		Count(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return count == len(uniqueIDs), nil
+}
+
 func (r *AssetRepository) DeleteFile(ctx context.Context, url string) error {
 	// S3の完全なURLからS3オブジェクトのキーを抽出する。
 	// 例: "https://s3.REGION.amazonaws.com/BUCKET_NAME/path/to/object" から "path/to/object" を抽出
