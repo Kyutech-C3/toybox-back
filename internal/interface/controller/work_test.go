@@ -175,20 +175,38 @@ func TestWorkController_GetWorkByID(t *testing.T) {
 	successResponseBytes, _ := json.Marshal(schema.ToWorkResponse(mockWork))
 	invalidIDResponseBytes, _ := json.Marshal(map[string]string{"message": "無効なリクエストです"})
 	notFoundResponseBytes, _ := json.Marshal(map[string]string{"message": "作品が見つかりませんでした"})
+	forbiddenResponseBytes, _ := json.Marshal(map[string]string{"message": "この作品を閲覧する権限がありません"})
 
 	tests := []struct {
 		name       string
 		workID     string
-		setupMock  func(mockWorkUsecase *mock.MockIWorkUseCase)
+		withAuth   bool
+		userID     uuid.UUID
+		setupMock  func(mockWorkUsecase *mock.MockIWorkUseCase, userID uuid.UUID)
 		wantStatus int
 		wantBody   []byte
 	}{
 		{
-			name:   "正常系",
-			workID: workID.String(),
-			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+			name:     "正常系: 認証なし",
+			workID:   workID.String(),
+			withAuth: false,
+			userID:   uuid.Nil,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase, userID uuid.UUID) {
 				mockWorkUsecase.EXPECT().
-					GetByID(gomock.Any(), workID).
+					GetByID(gomock.Any(), workID, userID).
+					Return(mockWork, nil)
+			},
+			wantStatus: http.StatusOK,
+			wantBody:   successResponseBytes,
+		},
+		{
+			name:     "正常系: 認証あり",
+			workID:   workID.String(),
+			withAuth: true,
+			userID:   author.ID,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase, userID uuid.UUID) {
+				mockWorkUsecase.EXPECT().
+					GetByID(gomock.Any(), workID, userID).
 					Return(mockWork, nil)
 			},
 			wantStatus: http.StatusOK,
@@ -197,20 +215,37 @@ func TestWorkController_GetWorkByID(t *testing.T) {
 		{
 			name:       "異常系: work_idが不正",
 			workID:     "invalid-uuid",
-			setupMock:  func(mockWorkUsecase *mock.MockIWorkUseCase) {},
+			withAuth:   false,
+			userID:     uuid.Nil,
+			setupMock:  func(mockWorkUsecase *mock.MockIWorkUseCase, userID uuid.UUID) {},
 			wantStatus: http.StatusBadRequest,
 			wantBody:   invalidIDResponseBytes,
 		},
 		{
-			name:   "異常系: Not Found",
-			workID: workID.String(),
-			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+			name:     "異常系: Not Found",
+			workID:   workID.String(),
+			withAuth: false,
+			userID:   uuid.Nil,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase, userID uuid.UUID) {
 				mockWorkUsecase.EXPECT().
-					GetByID(gomock.Any(), workID).
+					GetByID(gomock.Any(), workID, userID).
 					Return(nil, domainerrors.ErrWorkNotFound)
 			},
 			wantStatus: http.StatusNotFound,
 			wantBody:   notFoundResponseBytes,
+		},
+		{
+			name:     "異常系: 閲覧権限がない",
+			workID:   workID.String(),
+			withAuth: false,
+			userID:   uuid.Nil,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase, userID uuid.UUID) {
+				mockWorkUsecase.EXPECT().
+					GetByID(gomock.Any(), workID, userID).
+					Return(nil, domainerrors.ErrWorkNotViewable)
+			},
+			wantStatus: http.StatusForbidden,
+			wantBody:   forbiddenResponseBytes,
 		},
 	}
 
@@ -221,10 +256,18 @@ func TestWorkController_GetWorkByID(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockWorkUsecase := mock.NewMockIWorkUseCase(ctrl)
-			tt.setupMock(mockWorkUsecase)
+			tt.setupMock(mockWorkUsecase, tt.userID)
 
 			workController := controller.NewWorkController(mockWorkUsecase)
-			e.GET("/works/:work_id", workController.GetWorkByID)
+			e.GET("/works/:work_id", func(c echo.Context) error {
+				if tt.withAuth {
+					token := jwt.NewWithClaims(jwt.SigningMethodHS256, &schema.JWTCustomClaims{
+						UserID: tt.userID.String(),
+					})
+					c.Set("user", token)
+				}
+				return workController.GetWorkByID(c)
+			})
 
 			req := httptest.NewRequest(http.MethodGet, "/works/"+tt.workID, nil)
 			rec := httptest.NewRecorder()

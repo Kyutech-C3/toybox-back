@@ -298,17 +298,22 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 }
 
 func TestWorkUseCase_GetByID(t *testing.T) {
+	ownerID := uuid.New()
+
 	tests := []struct {
 		name           string
 		workID         uuid.UUID
+		userID         uuid.UUID
 		setupWorkMock  func(*mock.MockWorkRepository, uuid.UUID)
 		setupTagMock   func(*mock.MockTagRepository)
 		setupAssetMock func(*mock.MockAssetRepository)
 		wantErr        bool
+		errIs          error
 	}{
 		{
-			name:   "正常系: 作品取得成功",
+			name:   "正常系: public作品は未認証でも取得成功",
 			workID: uuid.New(),
+			userID: uuid.Nil,
 			setupWorkMock: func(m *mock.MockWorkRepository, workID uuid.UUID) {
 				author := entity.NewUser("test", "test@test.com", "test", "test", "test")
 				expectedWork := &entity.Work{
@@ -317,6 +322,7 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 					Description: "Test Description",
 					UserID:      author.ID,
 					User:        author,
+					Visibility:  "public",
 					CreatedAt:   time.Now(),
 					UpdatedAt:   time.Now(),
 				}
@@ -332,6 +338,7 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 		{
 			name:   "異常系: リポジトリエラー",
 			workID: uuid.New(),
+			userID: uuid.Nil,
 			setupWorkMock: func(m *mock.MockWorkRepository, workID uuid.UUID) {
 				m.EXPECT().
 					GetByID(gomock.Any(), gomock.Eq(workID)).
@@ -341,6 +348,64 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 			setupTagMock:   func(m *mock.MockTagRepository) {},
 			setupAssetMock: func(m *mock.MockAssetRepository) {},
 			wantErr:        true,
+		},
+		{
+			name:   "正常系: private作品は認証済みユーザーなら取得成功",
+			workID: uuid.New(),
+			userID: uuid.New(),
+			setupWorkMock: func(m *mock.MockWorkRepository, workID uuid.UUID) {
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Eq(workID)).
+					Return(&entity.Work{ID: workID, Visibility: "private"}, nil).
+					Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			wantErr:        false,
+		},
+		{
+			name:   "異常系: private作品は未認証だと取得不可",
+			workID: uuid.New(),
+			userID: uuid.Nil,
+			setupWorkMock: func(m *mock.MockWorkRepository, workID uuid.UUID) {
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Eq(workID)).
+					Return(&entity.Work{ID: workID, Visibility: "private"}, nil).
+					Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			wantErr:        true,
+			errIs:          domainerrors.ErrWorkNotViewable,
+		},
+		{
+			name:   "正常系: draft作品はオーナーなら取得成功",
+			workID: uuid.New(),
+			userID: ownerID,
+			setupWorkMock: func(m *mock.MockWorkRepository, workID uuid.UUID) {
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Eq(workID)).
+					Return(&entity.Work{ID: workID, UserID: ownerID, Visibility: "draft"}, nil).
+					Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			wantErr:        false,
+		},
+		{
+			name:   "異常系: draft作品はオーナー以外だと取得不可",
+			workID: uuid.New(),
+			userID: uuid.New(),
+			setupWorkMock: func(m *mock.MockWorkRepository, workID uuid.UUID) {
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Eq(workID)).
+					Return(&entity.Work{ID: workID, UserID: ownerID, Visibility: "draft"}, nil).
+					Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository) {},
+			wantErr:        true,
+			errIs:          domainerrors.ErrWorkNotViewable,
 		},
 	}
 
@@ -360,16 +425,18 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 
 			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
 
-			got, err := uc.GetByID(context.Background(), tt.workID)
+			got, err := uc.GetByID(context.Background(), tt.workID, tt.userID)
 
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)
+				if tt.errIs != nil {
+					assert.ErrorIs(t, err, tt.errIs)
+				}
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, tt.workID, got.ID)
-				assert.NotNil(t, got.User)
 			}
 		})
 	}
