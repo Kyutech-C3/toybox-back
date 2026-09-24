@@ -219,6 +219,11 @@ definitions:
       is_favorite:
         type: boolean
     type: object
+  github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse:
+    properties:
+      message:
+        type: string
+    type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.TagDetailResponse:
     properties:
       created_at:
@@ -347,6 +352,175 @@ info:
   title: Toybox API
   version: "1.0"
 paths:
+  /api/v1/blogs:
+    get:
+      description: Temporary read-only pass-through to the legacy ToyBox API. The
+        response schema is owned by the legacy service.
+      parameters:
+      - description: Visibility filter
+        in: query
+        name: visibility
+        type: string
+      - description: Maximum number of blogs
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Disable pagination
+        in: query
+        name: disable_pagination
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+      summary: Get blogs from the legacy API
+      tags:
+      - legacy-proxy
+  /api/v1/blogs/{blog_id}:
+    get:
+      description: Temporary read-only pass-through to the legacy ToyBox API. The
+        response schema is owned by the legacy service.
+      parameters:
+      - description: Blog ID
+        in: path
+        name: blog_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+      summary: Get a blog from the legacy API
+      tags:
+      - legacy-proxy
+  /api/v1/works:
+    get:
+      description: Temporary read-only pass-through to the legacy ToyBox API. The
+        response schema is owned by the legacy service.
+      parameters:
+      - description: Maximum number of works
+        in: query
+        name: limit
+        type: integer
+      - description: Visibility filter
+        in: query
+        name: visibility
+        type: string
+      - description: Oldest work cursor
+        in: query
+        name: oldest_work_id
+        type: string
+      - description: Newest work cursor
+        in: query
+        name: newest_work_id
+        type: string
+      - description: Comma-separated tag names
+        in: query
+        name: tag_names
+        type: string
+      - description: Comma-separated tag IDs
+        in: query
+        name: tag_ids
+        type: string
+      - description: Search text
+        in: query
+        name: search_word
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+      summary: Get works from the legacy API (v1)
+      tags:
+      - legacy-proxy
+  /api/v2/works:
+    get:
+      description: Temporary read-only pass-through to the legacy ToyBox API. The
+        response schema is owned by the legacy service.
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Maximum number of works
+        in: query
+        name: limit
+        type: integer
+      - description: Visibility filter
+        in: query
+        name: visibility
+        type: string
+      - description: Comma-separated tag names
+        in: query
+        name: tag_names
+        type: string
+      - description: Comma-separated tag IDs
+        in: query
+        name: tag_ids
+        type: string
+      - description: Search text
+        in: query
+        name: search_word
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+      summary: Get works from the legacy API (v2)
+      tags:
+      - legacy-proxy
   /auth/discord:
     get:
       description: Get Discord authentication URL

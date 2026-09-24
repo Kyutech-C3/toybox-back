@@ -2,9 +2,11 @@
 
 ## プロジェクト概要
 
-部員の作成した作品やブログの投稿や閲覧ができる Web アプリ、Toybox のバックエンドです。  
+部員の作成した作品を投稿・閲覧できる Web アプリ、Toybox のバックエンドです。
 既に動いている Web アプリのリプレイスを目指すものになります。(https://github.com/Kyutech-C3/toybox-server)
 /docs/design-doc.md に[設計ドキュメント](docs/design-doc.md)があります。
+
+移行期間中に限り、現システムで未実装の公式サイト向け読み取りAPIを旧ToyBoxへプロキシします。ブログの作成・編集・保存をこのバックエンドの責務には含めません。
 
 ## 開発環境の準備
 
@@ -33,6 +35,10 @@ $ go mod download
 
 # .envの作成と書き込み
 $ cp .env.example .env
+
+# 旧ToyBoxの公開APIを一時的にプロキシする場合は、schemeを含むURLを設定
+# 例: LEGACY_TOYBOX_BASE_URL=https://legacy.example.com
+# 接続先がvirtual hostを要求する場合のみ LEGACY_TOYBOX_PROXY_HOST も設定
 
 # サーバーを起動
 $ docker compose up -d
