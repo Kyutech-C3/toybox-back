@@ -1171,6 +1171,11 @@ const docTemplate = `{
         },
         "/works/{work_id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get a work by ID",
                 "produces": [
                     "application/json"
@@ -1197,6 +1202,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/echo.HTTPError"
                         }
