@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
@@ -332,6 +333,8 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 		}
 		work.Collaborators = collaborators
 	}
+
+	work.UpdatedAt = time.Now()
 
 	updatedWork, err := uc.workRepo.Update(ctx, work)
 	if err != nil {

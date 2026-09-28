@@ -1021,6 +1021,14 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 		}
 	}
 
+	oldUpdatedAt := time.Now().Add(-time.Hour)
+	workWithOldUpdatedAt := &entity.Work{
+		ID:        workID,
+		UserID:    userID,
+		Title:     "Original Title",
+		UpdatedAt: oldUpdatedAt,
+	}
+
 	oldThumbnailID := uuid.New()
 	newThumbnailID := uuid.New()
 	otherAssetID := uuid.New()
@@ -1176,6 +1184,24 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			},
 			wantErr:    true,
 			wantErrMsg: domainerrors.ErrAssetNotFound,
+		},
+		{
+			name:   "正常系: 更新するとUpdatedAtが更新される",
+			workID: workID,
+			userID: userID,
+			title:  &updatedTitle,
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(workWithOldUpdatedAt, nil).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, w *entity.Work) (*entity.Work, error) {
+					return w, nil
+				}).Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
+			wantErr:        false,
+			assertResult: func(t *testing.T, got *entity.Work) {
+				assert.True(t, got.UpdatedAt.After(oldUpdatedAt))
+			},
 		},
 		{
 			name:             "正常系: サムネイルのみ更新すると旧サムネイルアセットが削除される",
