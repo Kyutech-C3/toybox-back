@@ -1630,10 +1630,10 @@ const docTemplate = `{
                 "profile": {
                     "type": "string"
                 },
-                "twitter_id": {
+                "updated_at": {
                     "type": "string"
                 },
-                "updated_at": {
+                "x_username": {
                     "type": "string"
                 }
             }
@@ -1770,7 +1770,7 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 500
                 },
-                "twitter_id": {
+                "x_username": {
                     "type": "string"
                 }
             }
