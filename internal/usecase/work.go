@@ -260,19 +260,33 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 		}
 	}
 
+	oldThumbnailAssetID := work.ThumbnailAssetID
 	if thumbnailAssetID != nil {
 		work.ThumbnailAssetID = *thumbnailAssetID
 	}
-	var removedAssets []*entity.Asset
-	if assetIDs != nil {
+
+	resolvedAssetIDs := assetIDs
+	// assetIDs未指定でサムネイルのみ変更された場合、旧サムネイルを一覧から除外して削除対象にする
+	if resolvedAssetIDs == nil && oldThumbnailAssetID != work.ThumbnailAssetID {
+		current := make([]uuid.UUID, 0, len(work.Assets))
 		for _, oldAsset := range work.Assets {
-			if oldAsset.ID != work.ThumbnailAssetID && !slices.Contains(*assetIDs, oldAsset.ID) {
+			if oldAsset.ID != oldThumbnailAssetID {
+				current = append(current, oldAsset.ID)
+			}
+		}
+		resolvedAssetIDs = &current
+	}
+
+	var removedAssets []*entity.Asset
+	if resolvedAssetIDs != nil {
+		for _, oldAsset := range work.Assets {
+			if oldAsset.ID != work.ThumbnailAssetID && !slices.Contains(*resolvedAssetIDs, oldAsset.ID) {
 				removedAssets = append(removedAssets, oldAsset)
 			}
 		}
 
-		assets := make([]*entity.Asset, len(*assetIDs))
-		for i, assetID := range *assetIDs {
+		assets := make([]*entity.Asset, len(*resolvedAssetIDs))
+		for i, assetID := range *resolvedAssetIDs {
 			assets[i] = &entity.Asset{
 				ID: assetID,
 			}
