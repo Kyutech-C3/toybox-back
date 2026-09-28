@@ -1020,6 +1020,14 @@ paths:
         in: query
         name: tag_ids
         type: string
+      - description: 'Sort order: newest (default) or oldest'
+        in: query
+        name: sort
+        type: string
+      - description: 'Filter by visibility: public or private'
+        in: query
+        name: visibility
+        type: string
       produces:
       - application/json
       responses:
