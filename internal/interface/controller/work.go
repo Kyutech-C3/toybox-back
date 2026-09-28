@@ -32,6 +32,8 @@ func NewWorkController(workUsecase usecase.IWorkUseCase) *WorkController {
 // @Param limit query int false "Limit per page (default: 20, max: 100)"
 // @Param page query int false "Page number (default: 1)"
 // @Param tag_ids query string false "Comma-separated tag IDs for filtering (OR search)"
+// @Param sort query string false "Sort order: newest (default) or oldest"
+// @Param visibility query string false "Filter by visibility: public or private"
 // @Success 200 {object} schema.WorkListResponse
 // @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
@@ -77,7 +79,7 @@ func (wc *WorkController) GetAllWorks(c echo.Context) error {
 		}
 	}
 
-	works, total, limit, page, favoritedWorkIDs, err := wc.workUsecase.GetAll(c.Request().Context(), query.Limit, query.Page, userID, tagIDs)
+	works, total, limit, page, favoritedWorkIDs, err := wc.workUsecase.GetAll(c.Request().Context(), query.Limit, query.Page, userID, tagIDs, query.Sort, query.Visibility)
 	if err != nil {
 		return handleWorkError(c, err)
 	}

@@ -24,12 +24,24 @@ func NewWorkRepository(db *bun.DB) *WorkRepository {
 	}
 }
 
-func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs []uuid.UUID) ([]*entity.Work, int, error) {
+func createdAtOrder(sortOrder string) string {
+	if sortOrder == "oldest" {
+		return "created_at ASC"
+	}
+	return "created_at DESC"
+}
+
+func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs []uuid.UUID, sortOrder string, visibility *string) ([]*entity.Work, int, error) {
 	var dtoWorks []*dto.Work
+
+	visibilities := []types.Visibility{types.VisibilityPublic, types.VisibilityPrivate}
+	if visibility != nil {
+		visibilities = []types.Visibility{types.Visibility(*visibility)}
+	}
 
 	countQuery := r.db.NewSelect().
 		Model(&dtoWorks).
-		Where("visibility IN (?)", bun.In([]types.Visibility{types.VisibilityPublic, types.VisibilityPrivate})).
+		Where("visibility IN (?)", bun.In(visibilities)).
 		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
 		Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)")
 
@@ -45,7 +57,7 @@ func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs [
 
 	selectQuery := r.db.NewSelect().
 		Model(&dtoWorks).
-		Where("visibility IN (?)", bun.In([]types.Visibility{types.VisibilityPublic, types.VisibilityPrivate})).
+		Where("visibility IN (?)", bun.In(visibilities)).
 		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
 		Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)")
 
@@ -61,7 +73,7 @@ func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs [
 		Relation("User").
 		Relation("Thumbnail.Asset").
 		Relation("Collaborators").
-		Order("created_at DESC").
+		Order(createdAtOrder(sortOrder)).
 		Limit(limit).
 		Offset(offset).
 		Scan(ctx)
@@ -80,7 +92,7 @@ func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs [
 	return entityWorks, total, nil
 }
 
-func (r *WorkRepository) GetAllPublic(ctx context.Context, limit, offset int, tagIDs []uuid.UUID) ([]*entity.Work, int, error) {
+func (r *WorkRepository) GetAllPublic(ctx context.Context, limit, offset int, tagIDs []uuid.UUID, sortOrder string) ([]*entity.Work, int, error) {
 	var dtoWorks []*dto.Work
 
 	countQuery := r.db.NewSelect().
@@ -117,7 +129,7 @@ func (r *WorkRepository) GetAllPublic(ctx context.Context, limit, offset int, ta
 		Relation("User").
 		Relation("Thumbnail.Asset").
 		Relation("Collaborators").
-		Order("created_at DESC").
+		Order(createdAtOrder(sortOrder)).
 		Limit(limit).
 		Offset(offset).
 		Scan(ctx)
