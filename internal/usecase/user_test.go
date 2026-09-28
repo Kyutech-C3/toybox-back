@@ -165,12 +165,12 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 	originalEmail := "old@example.com"
 	originalDisplayName := "Old User"
 	originalProfile := "Old profile"
-	originalTwitterID := "old-twitter"
+	originalXUsername := "old-x-user"
 	originalGithubID := "old-github"
 
 	updatedDisplayName := "Updated User"
 	updatedProfile := "Updated profile"
-	updatedTwitterID := "twitter123"
+	updatedXUsername := "xuser123"
 	updatedGithubID := "github123"
 
 	newExistingUser := func(userID uuid.UUID) *entity.User {
@@ -180,7 +180,7 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 			Email:       originalEmail,
 			DisplayName: originalDisplayName,
 			Profile:     originalProfile,
-			TwitterID:   originalTwitterID,
+			XUsername:   originalXUsername,
 			GithubID:    originalGithubID,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
@@ -192,7 +192,7 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 		userID      uuid.UUID
 		displayName *string
 		profile     *string
-		twitterID   *string
+		xUsername   *string
 		githubID    *string
 		setupMock   func(*mock.MockUserRepository, uuid.UUID)
 		wantErr     bool
@@ -203,7 +203,7 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 			userID:      uuid.New(),
 			displayName: &updatedDisplayName,
 			profile:     &updatedProfile,
-			twitterID:   &updatedTwitterID,
+			xUsername:   &updatedXUsername,
 			githubID:    &updatedGithubID,
 			setupMock: func(m *mock.MockUserRepository, userID uuid.UUID) {
 				m.EXPECT().
@@ -222,7 +222,7 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 				assert.Equal(t, originalEmail, got.Email)
 				assert.Equal(t, updatedDisplayName, got.DisplayName)
 				assert.Equal(t, updatedProfile, got.Profile)
-				assert.Equal(t, updatedTwitterID, got.TwitterID)
+				assert.Equal(t, updatedXUsername, got.XUsername)
 				assert.Equal(t, updatedGithubID, got.GithubID)
 			},
 		},
@@ -246,7 +246,7 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 			verify: func(t *testing.T, got *entity.User) {
 				assert.Equal(t, updatedDisplayName, got.DisplayName)
 				assert.Equal(t, originalProfile, got.Profile)
-				assert.Equal(t, originalTwitterID, got.TwitterID)
+				assert.Equal(t, originalXUsername, got.XUsername)
 				assert.Equal(t, originalGithubID, got.GithubID)
 			},
 		},
@@ -289,7 +289,7 @@ func TestUserUseCase_UpdateUser(t *testing.T) {
 
 			uc := usecase.NewUserUseCase(mockRepo)
 
-			got, err := uc.UpdateUser(context.Background(), tt.userID, tt.displayName, tt.profile, tt.twitterID, tt.githubID)
+			got, err := uc.UpdateUser(context.Background(), tt.userID, tt.displayName, tt.profile, tt.xUsername, tt.githubID)
 
 			if tt.wantErr {
 				assert.Error(t, err)

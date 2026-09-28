@@ -14,7 +14,7 @@ type User struct {
 	DiscordUserID string
 	Profile       string
 	AvatarURL     string
-	TwitterID     string
+	XUsername     string
 	GithubID      string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time

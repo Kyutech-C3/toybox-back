@@ -13,7 +13,7 @@ type GetUserOutput struct {
 	DisplayName string    `json:"display_name"`
 	Profile     string    `json:"profile"`
 	AvatarURL   string    `json:"avatar_url"`
-	TwitterID   string    `json:"twitter_id"`
+	XUsername   string    `json:"x_username"`
 	GithubID    string    `json:"github_id"`
 	CreatedAt   string    `json:"created_at"`
 	UpdatedAt   string    `json:"updated_at"`
@@ -32,7 +32,7 @@ type UserListResponse struct {
 type UpdateUserInput struct {
 	DisplayName *string `json:"display_name,omitempty" validate:"omitempty,min=1,max=32"`
 	Profile     *string `json:"profile,omitempty" validate:"omitempty,max=500"`
-	TwitterID   *string `json:"twitter_id,omitempty" validate:"omitempty"`
+	XUsername   *string `json:"x_username,omitempty" validate:"omitempty"`
 	GithubID    *string `json:"github_id,omitempty" validate:"omitempty"`
 }
 
@@ -46,7 +46,7 @@ func ToUserResponse(user *entity.User) GetUserOutput {
 		DisplayName: user.DisplayName,
 		Profile:     user.Profile,
 		AvatarURL:   user.AvatarURL,
-		TwitterID:   user.TwitterID,
+		XUsername:   user.XUsername,
 		GithubID:    user.GithubID,
 		CreatedAt:   user.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   user.UpdatedAt.Format(time.RFC3339),

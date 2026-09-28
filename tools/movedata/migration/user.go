@@ -32,7 +32,7 @@ func MigrateUsers(ctx context.Context, sourceDB, targetDB bun.IDB) error {
 			DiscordUserID: derefString(old.DiscordUserID),
 			Profile:       derefString(old.Profile),
 			AvatarURL:     derefString(old.AvatarURL),
-			TwitterID:     derefString(old.TwitterID),
+			XUsername:     derefString(old.TwitterID),
 			GithubID:      derefString(old.GithubID),
 			CreatedAt:     old.CreatedAt,
 			UpdatedAt:     old.UpdatedAt,

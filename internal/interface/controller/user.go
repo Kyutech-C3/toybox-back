@@ -124,7 +124,7 @@ func (uc *UserController) UpdateUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
 	}
 
-	newUser, err := uc.userusecase.UpdateUser(c.Request().Context(), userID, input.DisplayName, input.Profile, input.TwitterID, input.GithubID)
+	newUser, err := uc.userusecase.UpdateUser(c.Request().Context(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID)
 	if err != nil {
 		c.Logger().Error("Failed to update user:", err)
 		return handleUserError(err)

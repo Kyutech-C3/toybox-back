@@ -173,9 +173,9 @@ definitions:
         type: string
       profile:
         type: string
-      twitter_id:
-        type: string
       updated_at:
+        type: string
+      x_username:
         type: string
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.GetWorkOutput:
@@ -265,7 +265,7 @@ definitions:
       profile:
         maxLength: 500
         type: string
-      twitter_id:
+      x_username:
         type: string
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput:
