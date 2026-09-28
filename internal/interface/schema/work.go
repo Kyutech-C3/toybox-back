@@ -63,9 +63,11 @@ type UpdateWorkInput struct {
 }
 
 type GetWorksQuery struct {
-	Limit  *int   `query:"limit" validate:"omitempty,min=1,max=100"`
-	Page   *int   `query:"page" validate:"omitempty,min=1"`
-	TagIDs string `query:"tag_ids" validate:"omitempty"`
+	Limit      *int    `query:"limit" validate:"omitempty,min=1,max=100"`
+	Page       *int    `query:"page" validate:"omitempty,min=1"`
+	TagIDs     string  `query:"tag_ids" validate:"omitempty"`
+	Sort       *string `query:"sort" validate:"omitempty,oneof=newest oldest"`
+	Visibility *string `query:"visibility" validate:"omitempty,oneof=public private"`
 }
 
 type GetWorksByUserQuery struct {

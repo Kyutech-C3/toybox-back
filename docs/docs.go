@@ -1043,6 +1043,18 @@ const docTemplate = `{
                         "description": "Comma-separated tag IDs for filtering (OR search)",
                         "name": "tag_ids",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order: newest (default) or oldest",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by visibility: public or private",
+                        "name": "visibility",
+                        "in": "query"
                     }
                 ],
                 "responses": {

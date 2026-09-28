@@ -13,7 +13,7 @@ import (
 )
 
 type IWorkUseCase interface {
-	GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
+	GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID, sortOrder *string, visibility *string) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
 	GetByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entity.Work, error)
 	GetByUserID(ctx context.Context, limit, page *int, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
 	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error)
@@ -61,7 +61,7 @@ func (uc *workUseCase) favoritedWorkIDs(ctx context.Context, viewerID uuid.UUID,
 	return favoritedSet, nil
 }
 
-func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error) {
+func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID, sortOrder *string, visibility *string) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error) {
 	actualLimit := 20
 	actualPage := 1
 	if limit != nil {
@@ -71,8 +71,18 @@ func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid
 		actualPage = *page
 	}
 	offset := (actualPage - 1) * actualLimit
+
+	resolvedSortOrder := "newest"
+	if sortOrder != nil {
+		resolvedSortOrder = *sortOrder
+	}
+
 	if userID == uuid.Nil {
-		works, total, err := uc.workRepo.GetAllPublic(ctx, actualLimit, offset, tagIDs)
+		if visibility != nil && *visibility != "public" {
+			// 未認証ユーザーが閲覧できるのはpublicのみなので、それ以外を要求された場合は空を返す
+			return []*entity.Work{}, 0, actualLimit, actualPage, map[uuid.UUID]bool{}, nil
+		}
+		works, total, err := uc.workRepo.GetAllPublic(ctx, actualLimit, offset, tagIDs, resolvedSortOrder)
 		if err != nil {
 			return nil, 0, 0, 0, nil, fmt.Errorf("failed to get all works by user ID %s: %w", userID.String(), err)
 		}
@@ -83,7 +93,7 @@ func (uc *workUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid
 		return works, total, actualLimit, actualPage, favoritedWorkIDs, nil
 	}
 
-	works, total, err := uc.workRepo.GetAll(ctx, actualLimit, offset, tagIDs)
+	works, total, err := uc.workRepo.GetAll(ctx, actualLimit, offset, tagIDs, resolvedSortOrder, visibility)
 	if err != nil {
 		return nil, 0, 0, 0, nil, fmt.Errorf("failed to get all works: %w", err)
 	}
