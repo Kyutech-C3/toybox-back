@@ -3,9 +3,9 @@ package migration
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
+	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/dto"
 	"github.com/uptrace/bun"
 )
@@ -28,22 +28,7 @@ func MigrateTags(ctx context.Context, sourceDB, targetDB bun.IDB) (map[uuid.UUID
 			return nil, fmt.Errorf("failed to parse tag UUID %s: %w", old.ID, err)
 		}
 
-		var builder strings.Builder
-		for _, r := range old.Name {
-			switch {
-			case 'Ａ' <= r && r <= 'Ｚ':
-				builder.WriteRune(r - 'Ａ' + 'a')
-			case 'ａ' <= r && r <= 'ｚ':
-				builder.WriteRune(r - 'ａ' + 'a')
-			case 'A' <= r && r <= 'Z':
-				builder.WriteRune(r - 'A' + 'a')
-			case '０' <= r && r <= '９':
-				builder.WriteRune(r - '０' + '0')
-			default:
-				builder.WriteRune(r)
-			}
-		}
-		convertedName := builder.String()
+		convertedName := entity.NormalizeTagName(old.Name)
 
 		representativeID, exists := normalizedNameToRepresentativeId[convertedName]
 		if !exists {
