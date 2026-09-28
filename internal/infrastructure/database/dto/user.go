@@ -19,7 +19,7 @@ type User struct {
 	DiscordUserID string    `bun:"discord_user_id"`
 	Profile       string    `bun:"profile"`
 	AvatarURL     string    `bun:"avatar_url"`
-	TwitterID     string    `bun:"twitter_id"`
+	XUsername     string    `bun:"x_username"`
 	GithubID      string    `bun:"github_id"`
 	CreatedAt     time.Time `bun:"created_at,notnull"`
 	UpdatedAt     time.Time `bun:"updated_at,notnull"`
@@ -34,7 +34,7 @@ func (u *User) ToUserEntity() *entity.User {
 		DiscordUserID: u.DiscordUserID,
 		Profile:       u.Profile,
 		AvatarURL:     u.AvatarURL,
-		TwitterID:     u.TwitterID,
+		XUsername:     u.XUsername,
 		GithubID:      u.GithubID,
 		CreatedAt:     u.CreatedAt,
 		UpdatedAt:     u.UpdatedAt,
@@ -50,7 +50,7 @@ func ToUserDTO(entity *entity.User) *User {
 		DiscordUserID: entity.DiscordUserID,
 		Profile:       entity.Profile,
 		AvatarURL:     entity.AvatarURL,
-		TwitterID:     entity.TwitterID,
+		XUsername:     entity.XUsername,
 		GithubID:      entity.GithubID,
 		CreatedAt:     entity.CreatedAt,
 		UpdatedAt:     entity.UpdatedAt,
