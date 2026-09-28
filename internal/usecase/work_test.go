@@ -1021,18 +1021,35 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 		}
 	}
 
+	oldThumbnailID := uuid.New()
+	newThumbnailID := uuid.New()
+	otherAssetID := uuid.New()
+	newWorkWithThumbnail := func() *entity.Work {
+		return &entity.Work{
+			ID:               workID,
+			UserID:           userID,
+			ThumbnailAssetID: oldThumbnailID,
+			Assets: []*entity.Asset{
+				{ID: oldThumbnailID, URL: "http://old-thumbnail.url"},
+				{ID: otherAssetID, URL: "http://other-asset.url"},
+			},
+		}
+	}
+
 	tests := []struct {
-		name           string
-		workID         uuid.UUID
-		userID         uuid.UUID
-		title          *string
-		description    *string
-		assetIDs       *[]uuid.UUID
-		setupWorkMock  func(*mock.MockWorkRepository)
-		setupTagMock   func(*mock.MockTagRepository)
-		setupAssetMock func(*mock.MockAssetRepository, *[]uuid.UUID, uuid.UUID)
-		wantErr        bool
-		wantErrMsg     error
+		name             string
+		workID           uuid.UUID
+		userID           uuid.UUID
+		title            *string
+		description      *string
+		thumbnailAssetID *uuid.UUID
+		assetIDs         *[]uuid.UUID
+		setupWorkMock    func(*mock.MockWorkRepository)
+		setupTagMock     func(*mock.MockTagRepository)
+		setupAssetMock   func(*mock.MockAssetRepository, *[]uuid.UUID, uuid.UUID)
+		wantErr          bool
+		wantErrMsg       error
+		assertResult     func(t *testing.T, got *entity.Work)
 	}{
 		{
 			name:        "正常系: タイトルと説明を更新",
@@ -1160,6 +1177,65 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			wantErr:    true,
 			wantErrMsg: domainerrors.ErrAssetNotFound,
 		},
+		{
+			name:             "正常系: サムネイルのみ更新すると旧サムネイルアセットが削除される",
+			workID:           workID,
+			userID:           userID,
+			thumbnailAssetID: &newThumbnailID,
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithThumbnail(), nil).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, w *entity.Work) (*entity.Work, error) {
+					return w, nil
+				}).Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq([]uuid.UUID{newThumbnailID}), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+				m.EXPECT().DeleteFile(gomock.Any(), "http://old-thumbnail.url").Return(nil).Times(1)
+			},
+			wantErr: false,
+			assertResult: func(t *testing.T, got *entity.Work) {
+				assert.Equal(t, newThumbnailID, got.ThumbnailAssetID)
+				gotIDs := make([]uuid.UUID, len(got.Assets))
+				for i, a := range got.Assets {
+					gotIDs[i] = a.ID
+				}
+				assert.ElementsMatch(t, []uuid.UUID{otherAssetID}, gotIDs)
+			},
+		},
+		{
+			name:             "正常系: サムネイルとassetIDsを同時指定して更新できる",
+			workID:           workID,
+			userID:           userID,
+			thumbnailAssetID: &newThumbnailID,
+			assetIDs:         &[]uuid.UUID{otherAssetID},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithThumbnail(), nil).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, w *entity.Work) (*entity.Work, error) {
+					return w, nil
+				}).Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq([]uuid.UUID{newThumbnailID, otherAssetID}), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+				m.EXPECT().DeleteFile(gomock.Any(), "http://old-thumbnail.url").Return(nil).Times(1)
+			},
+			wantErr: false,
+			assertResult: func(t *testing.T, got *entity.Work) {
+				assert.Equal(t, newThumbnailID, got.ThumbnailAssetID)
+				gotIDs := make([]uuid.UUID, len(got.Assets))
+				for i, a := range got.Assets {
+					gotIDs[i] = a.ID
+				}
+				assert.ElementsMatch(t, []uuid.UUID{otherAssetID}, gotIDs)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1178,7 +1254,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			tt.setupAssetMock(mockAssetRepo, tt.assetIDs, tt.userID)
 
 			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
-			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, nil, tt.assetIDs, nil, nil, nil)
+			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, tt.thumbnailAssetID, tt.assetIDs, nil, nil, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -1190,6 +1266,9 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, workID, got.ID)
+				if tt.assertResult != nil {
+					tt.assertResult(t, got)
+				}
 			}
 		})
 	}
