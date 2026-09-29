@@ -1112,7 +1112,6 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			UserID:           userID,
 			ThumbnailAssetID: oldThumbnailID,
 			Assets: []*entity.Asset{
-				{ID: oldThumbnailID, URL: "http://old-thumbnail.url"},
 				{ID: otherAssetID, URL: "http://other-asset.url"},
 			},
 		}
@@ -1278,7 +1277,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			},
 		},
 		{
-			name:             "正常系: サムネイルのみ更新すると旧サムネイルアセットが削除される",
+			name:             "正常系: サムネイルのみ更新してもassetsは変わらずファイルは削除されない",
 			workID:           workID,
 			userID:           userID,
 			thumbnailAssetID: &newThumbnailID,
@@ -1294,7 +1293,6 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 					ExistAllByUserID(gomock.Any(), gomock.Eq([]uuid.UUID{newThumbnailID}), gomock.Eq(userID)).
 					Return(true, nil).
 					Times(1)
-				m.EXPECT().DeleteFile(gomock.Any(), "http://old-thumbnail.url").Return(nil).Times(1)
 			},
 			wantErr: false,
 			assertResult: func(t *testing.T, got *entity.Work) {
@@ -1324,7 +1322,6 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 					ExistAllByUserID(gomock.Any(), gomock.Eq([]uuid.UUID{newThumbnailID, otherAssetID}), gomock.Eq(userID)).
 					Return(true, nil).
 					Times(1)
-				m.EXPECT().DeleteFile(gomock.Any(), "http://old-thumbnail.url").Return(nil).Times(1)
 			},
 			wantErr: false,
 			assertResult: func(t *testing.T, got *entity.Work) {

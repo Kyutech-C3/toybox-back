@@ -370,13 +370,13 @@ func TestTagRepository_CountWorksByTag(t *testing.T) {
 	noAssetTagID := insertTestTag(t, db, "count-no-asset")
 	unusedTagID := insertTestTag(t, db, "count-unused")
 
-	createWork := func(visibility string, tagID uuid.UUID, withThumbnail bool) {
+	createWork := func(visibility string, tagID uuid.UUID, withAsset bool) {
 		w := newTestWork(user.ID, "title-"+uuid.NewString())
 		w.Visibility = visibility
 		w.TagIDs = []uuid.UUID{tagID}
-		if withThumbnail {
-			thumbnailAsset := insertTestAsset(t, db, user.ID)
-			w.ThumbnailAssetID = thumbnailAsset.ID
+		w.ThumbnailAssetID = insertTestAsset(t, db, user.ID).ID
+		if withAsset {
+			w.Assets = []*entity.Asset{insertTestAsset(t, db, user.ID)}
 		}
 		_, err := workRepo.Create(ctx, w)
 		require.NoError(t, err)
@@ -385,7 +385,7 @@ func TestTagRepository_CountWorksByTag(t *testing.T) {
 	createWork("public", publicTagID, true)
 	createWork("private", privateTagID, true)
 	createWork("draft", draftTagID, true)
-	createWork("public", noAssetTagID, false) // asset不在の不完全な作品
+	createWork("public", noAssetTagID, false) // サムネイルのみでasset不在の不完全な作品
 
 	t.Run("未認証: publicかつasset有りの作品のみカウントされる", func(t *testing.T) {
 		counts, err := tagRepo.CountWorksByTag(ctx, false)
