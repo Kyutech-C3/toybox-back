@@ -271,11 +271,6 @@ func (r *WorkRepository) Create(ctx context.Context, work *entity.Work) (*entity
 		}
 	}
 
-	_, err = tx.NewUpdate().Model(&dto.Asset{}).Set("work_id = ?", dtoWork.ID).Where("id = ?", dtoWork.ThumbnailAssetID).Exec(ctx)
-	if err != nil {
-		return nil, domainerrors.ErrFailedToCreateAsset
-	}
-
 	if len(dtoWork.URLs) > 0 {
 		_, err = tx.NewInsert().Model(&dtoWork.URLs).Exec(ctx)
 		if err != nil {
@@ -357,17 +352,17 @@ func (r *WorkRepository) Update(ctx context.Context, work *entity.Work) (*entity
 		return nil, domainerrors.ErrFailedToUpdateWork
 	}
 
-	// +1はThumbnailAssetIDの分
-	keepAssetIDs := make([]uuid.UUID, 0, len(dtoWork.Assets)+1)
-	keepAssetIDs = append(keepAssetIDs, dtoWork.ThumbnailAssetID)
-	for _, asset := range dtoWork.Assets {
-		keepAssetIDs = append(keepAssetIDs, asset.ID)
+	keepAssetIDs := make([]uuid.UUID, len(dtoWork.Assets))
+	for i, asset := range dtoWork.Assets {
+		keepAssetIDs[i] = asset.ID
 	}
-	_, err = tx.NewDelete().
+	deleteAssetQuery := tx.NewDelete().
 		Model(&dto.Asset{}).
-		Where("work_id = ?", work.ID).
-		Where("id NOT IN (?)", bun.In(keepAssetIDs)).
-		Exec(ctx)
+		Where("work_id = ?", work.ID)
+	if len(keepAssetIDs) > 0 {
+		deleteAssetQuery = deleteAssetQuery.Where("id NOT IN (?)", bun.In(keepAssetIDs))
+	}
+	_, err = deleteAssetQuery.Exec(ctx)
 	if err != nil {
 		return nil, domainerrors.ErrFailedToUpdateWork
 	}
@@ -423,10 +418,6 @@ func (r *WorkRepository) Update(ctx context.Context, work *entity.Work) (*entity
 				return nil, domainerrors.ErrFailedToUpdateWork
 			}
 		}
-	}
-	_, err = tx.NewUpdate().Model(&dto.Asset{}).Set("work_id = ?", dtoWork.ID).Where("id = ?", dtoWork.ThumbnailAssetID).Exec(ctx)
-	if err != nil {
-		return nil, domainerrors.ErrFailedToUpdateWork
 	}
 
 	err = tx.Commit()
