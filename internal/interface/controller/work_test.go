@@ -456,6 +456,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 	invalidTitleResponseBytes, _ := json.Marshal(map[string]string{"message": "タイトルが不正です"})
 	invalidDescriptionResponseBytes, _ := json.Marshal(map[string]string{"message": "説明が不正です"})
 	invalidVisibilityResponseBytes, _ := json.Marshal(map[string]string{"message": "公開設定が不正です"})
+	thumbnailAssetInAssetIDsResponseBytes, _ := json.Marshal(map[string]string{"message": "サムネイルと同じアセットIDをアセットに指定することはできません"})
 
 	tests := []struct {
 		name       string
@@ -537,6 +538,17 @@ func TestWorkController_CreateWork(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 			wantBody:   invalidVisibilityResponseBytes,
 		},
+		{
+			name: "異常系: サムネイルと同じアセットIDがasset_idsに含まれる",
+			body: inputJSON,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+				mockWorkUsecase.EXPECT().
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, domainerrors.ErrThumbnailAssetInAssetIDs)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   thumbnailAssetInAssetIDsResponseBytes,
+		},
 	}
 
 	for _, tt := range tests {
@@ -604,6 +616,9 @@ func TestWorkController_UpdateWork(t *testing.T) {
 	notFoundResponseBytes, _ := json.Marshal(map[string]string{"message": "作品が見つかりませんでした"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
 	invalidThumbnailAssetIDResponseBytes, _ := json.Marshal(map[string]string{"message": "サムネイルのアセットIDが不正です"})
+	thumbnailAssetInAssetIDsResponseBytes, _ := json.Marshal(map[string]string{"message": "サムネイルと同じアセットIDをアセットに指定することはできません"})
+	duplicatedAssetID := uuid.New()
+	duplicatedAssetIDJSON, _ := json.Marshal(&schema.UpdateWorkInput{ThumbnailAssetID: &duplicatedAssetID, AssetIDs: &[]uuid.UUID{duplicatedAssetID}})
 
 	tests := []struct {
 		name       string
@@ -714,6 +729,19 @@ func TestWorkController_UpdateWork(t *testing.T) {
 			},
 			wantStatus: http.StatusBadRequest,
 			wantBody:   invalidThumbnailAssetIDResponseBytes,
+		},
+		{
+			name:   "異常系: サムネイルと同じアセットIDがasset_idsに含まれる",
+			workID: workID.String(),
+			body:   duplicatedAssetIDJSON,
+			userID: userID,
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+				mockWorkUsecase.EXPECT().
+					UpdateWork(gomock.Any(), workID, userID, nil, nil, nil, &duplicatedAssetID, &[]uuid.UUID{duplicatedAssetID}, nil, nil, nil).
+					Return(nil, domainerrors.ErrThumbnailAssetInAssetIDs)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   thumbnailAssetInAssetIDsResponseBytes,
 		},
 	}
 

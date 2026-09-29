@@ -798,6 +798,8 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 }
 
 func TestWorkUseCase_CreateWork(t *testing.T) {
+	duplicatedAssetID := uuid.New()
+
 	tests := []struct {
 		name             string
 		title            string
@@ -864,6 +866,25 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			urls:             []string{"https://example.com"},
 			userID:           uuid.New(),
 			tagIDs:           []uuid.UUID{},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
+			wantErr:        true,
+		},
+		{
+			name:             "異常系: サムネイルと同じアセットIDがasset_idsに含まれる",
+			title:            "Title",
+			description:      "Description",
+			visibility:       "public",
+			thumbnailAssetID: duplicatedAssetID,
+			assetIDs:         []uuid.UUID{uuid.New(), duplicatedAssetID},
+			urls:             []string{"https://example.com"},
+			userID:           uuid.New(),
+			tagIDs:           []uuid.UUID{uuid.New()},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
@@ -1275,6 +1296,46 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			assertResult: func(t *testing.T, got *entity.Work) {
 				assert.True(t, got.UpdatedAt.After(oldUpdatedAt))
 			},
+		},
+		{
+			name:             "異常系: サムネイルと同じアセットIDをasset_idsに同時指定する",
+			workID:           workID,
+			userID:           userID,
+			thumbnailAssetID: &newThumbnailID,
+			assetIDs:         &[]uuid.UUID{otherAssetID, newThumbnailID},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithThumbnail(), nil).Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
+			wantErr:        true,
+			wantErrMsg:     domainerrors.ErrThumbnailAssetInAssetIDs,
+		},
+		{
+			name:     "異常系: サムネイルを変更せず現在のサムネイルと同じアセットIDをasset_idsに指定する",
+			workID:   workID,
+			userID:   userID,
+			assetIDs: &[]uuid.UUID{otherAssetID, oldThumbnailID},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithThumbnail(), nil).Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
+			wantErr:        true,
+			wantErrMsg:     domainerrors.ErrThumbnailAssetInAssetIDs,
+		},
+		{
+			name:             "異常系: asset_ids未指定でサムネイルを既存のアセットに変更する",
+			workID:           workID,
+			userID:           userID,
+			thumbnailAssetID: &otherAssetID,
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithThumbnail(), nil).Times(1)
+			},
+			setupTagMock:   func(m *mock.MockTagRepository) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
+			wantErr:        true,
+			wantErrMsg:     domainerrors.ErrThumbnailAssetInAssetIDs,
 		},
 		{
 			name:             "正常系: サムネイルのみ更新してもassetsは変わらずファイルは削除されない",
