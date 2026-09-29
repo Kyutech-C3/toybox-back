@@ -168,6 +168,9 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 	if len(tagIDs) == 0 {
 		return nil, domainerrors.ErrInvalidTagIDs
 	}
+	if slices.Contains(assetIDs, thumbnailAssetID) {
+		return nil, domainerrors.ErrThumbnailAssetInAssetIDs
+	}
 
 	var tags []*entity.Tag
 	var err error
@@ -252,6 +255,21 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 	}
 	if thumbnailAssetID != nil && *thumbnailAssetID == uuid.Nil {
 		return nil, domainerrors.ErrInvalidThumbnailAssetID
+	}
+
+	resultThumbnailAssetID := work.ThumbnailAssetID
+	if thumbnailAssetID != nil {
+		resultThumbnailAssetID = *thumbnailAssetID
+	}
+	resultAssetIDs := make([]uuid.UUID, len(work.Assets))
+	for i, asset := range work.Assets {
+		resultAssetIDs[i] = asset.ID
+	}
+	if assetIDs != nil {
+		resultAssetIDs = *assetIDs
+	}
+	if slices.Contains(resultAssetIDs, resultThumbnailAssetID) {
+		return nil, domainerrors.ErrThumbnailAssetInAssetIDs
 	}
 
 	verifyAssetIDs := make([]uuid.UUID, 0, 1)

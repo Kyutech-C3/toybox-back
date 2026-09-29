@@ -40,6 +40,7 @@ var (
 	ErrInvalidUserID                       = errors.New("invalid user id")
 	ErrInvalidTagIDs                       = errors.New("invalid tag ids")
 	ErrInvalidThumbnailAssetID             = errors.New("invalid thumbnail asset id")
+	ErrThumbnailAssetInAssetIDs            = errors.New("thumbnail asset id must not be included in asset ids")
 	ErrOwnerCannotBeCollaborator           = errors.New("work owner cannot be added as a collaborator")
 	ErrFailedToCreateWork                  = errors.New("failed to create work")
 	ErrFailedToUpdateWork                  = errors.New("failed to update work")
