@@ -903,7 +903,7 @@ func TestWorkRepository_Update_RemovesUnlinkedAssets(t *testing.T) {
 	for i, asset := range fetched.Assets {
 		fetchedAssetIDs[i] = asset.ID
 	}
-	require.ElementsMatch(t, []uuid.UUID{keptAsset.ID, thumbnailAsset.ID}, fetchedAssetIDs)
+	require.ElementsMatch(t, []uuid.UUID{keptAsset.ID}, fetchedAssetIDs)
 	require.Equal(t, thumbnailAsset.URL, fetched.ThumbnailURL)
 
 	removedExists, err := db.NewSelect().Model(&dto.Asset{}).Where("id = ?", removedAsset.ID).Exists(ctx)
@@ -913,6 +913,79 @@ func TestWorkRepository_Update_RemovesUnlinkedAssets(t *testing.T) {
 	thumbnailExists, err := db.NewSelect().Model(&dto.Asset{}).Where("id = ?", thumbnailAsset.ID).Exists(ctx)
 	require.NoError(t, err)
 	require.True(t, thumbnailExists, "サムネイルアセットは削除されない")
+}
+
+func TestWorkRepository_Update_RemovesAllAssetsWhenEmpty(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
+	asset1 := insertTestAsset(t, db, user.ID)
+	asset2 := insertTestAsset(t, db, user.ID)
+
+	workEntity := newTestWork(user.ID, "work-with-assets")
+	workEntity.ThumbnailAssetID = thumbnailAsset.ID
+	workEntity.Assets = []*entity.Asset{asset1, asset2}
+	created, err := repo.Create(ctx, workEntity)
+	require.NoError(t, err)
+
+	created.Assets = []*entity.Asset{}
+	updated, err := repo.Update(ctx, created)
+	require.NoError(t, err)
+	require.Empty(t, updated.Assets)
+
+	for _, removed := range []*entity.Asset{asset1, asset2} {
+		exists, err := db.NewSelect().Model(&dto.Asset{}).Where("id = ?", removed.ID).Exists(ctx)
+		require.NoError(t, err)
+		require.False(t, exists, "assetsが空になった場合は紐づいていたアセットがすべて削除される")
+	}
+
+	thumbnailExists, err := db.NewSelect().Model(&dto.Asset{}).Where("id = ?", thumbnailAsset.ID).Exists(ctx)
+	require.NoError(t, err)
+	require.True(t, thumbnailExists, "サムネイルアセットは削除されない")
+}
+
+func TestWorkRepository_ThumbnailAssetIsNotLinkedToWork(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := work.NewWorkRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+	thumbnailAsset := insertTestAsset(t, db, user.ID)
+	newThumbnailAsset := insertTestAsset(t, db, user.ID)
+	asset := insertTestAsset(t, db, user.ID)
+
+	workEntity := newTestWork(user.ID, "work-with-thumbnail")
+	workEntity.ThumbnailAssetID = thumbnailAsset.ID
+	workEntity.Assets = []*entity.Asset{asset}
+	created, err := repo.Create(ctx, workEntity)
+	require.NoError(t, err)
+
+	workIDOf := func(assetID uuid.UUID) uuid.UUID {
+		var dtoAsset dto.Asset
+		err := db.NewSelect().Model(&dtoAsset).Where("id = ?", assetID).Scan(ctx)
+		require.NoError(t, err)
+		return dtoAsset.WorkID
+	}
+
+	fetched, err := repo.GetByID(ctx, created.ID)
+	require.NoError(t, err)
+	require.Equal(t, thumbnailAsset.ID, fetched.ThumbnailAssetID)
+	require.Len(t, fetched.Assets, 1)
+	require.Equal(t, asset.ID, fetched.Assets[0].ID)
+	require.Equal(t, uuid.Nil, workIDOf(thumbnailAsset.ID), "作成してもサムネイルのassetにwork_idは設定されない")
+	require.Equal(t, created.ID, workIDOf(asset.ID))
+
+	fetched.ThumbnailAssetID = newThumbnailAsset.ID
+	updated, err := repo.Update(ctx, fetched)
+	require.NoError(t, err)
+	require.Equal(t, newThumbnailAsset.ID, updated.ThumbnailAssetID)
+	require.Len(t, updated.Assets, 1)
+	require.Equal(t, asset.ID, updated.Assets[0].ID)
+	require.Equal(t, uuid.Nil, workIDOf(newThumbnailAsset.ID), "更新してもサムネイルのassetにwork_idは設定されない")
+	require.Equal(t, uuid.Nil, workIDOf(thumbnailAsset.ID))
 }
 
 func TestWorkRepository_Delete(t *testing.T) {
