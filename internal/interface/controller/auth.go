@@ -116,7 +116,7 @@ func (ac *AuthController) RegenerateToken(c echo.Context) error {
 			HttpOnly: true,
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
-			Path:     "/",
+			Path:     "/auth",
 		}
 		c.SetCookie(cookie)
 	case "dev":
@@ -126,7 +126,7 @@ func (ac *AuthController) RegenerateToken(c echo.Context) error {
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
-			Path:     "/",
+			Path:     "/auth",
 		}
 		c.SetCookie(cookie)
 	}
@@ -162,7 +162,7 @@ func (ac *AuthController) Logout(c echo.Context) error {
 			HttpOnly: true,
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
-			Path:     "/",
+			Path:     "/auth",
 			MaxAge:   -1,
 		}
 		c.SetCookie(invalidCookie)
@@ -173,7 +173,7 @@ func (ac *AuthController) Logout(c echo.Context) error {
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
-			Path:     "/",
+			Path:     "/auth",
 			MaxAge:   -1,
 		}
 		c.SetCookie(invalidCookie)

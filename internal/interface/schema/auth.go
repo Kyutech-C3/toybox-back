@@ -24,7 +24,7 @@ type RegenerateTokenInput struct {
 }
 
 type RegenerateTokenResponse struct {
-	AppToken string `json:"app_token"`
+	AccessToken string `json:"access_token"`
 }
 
 type JWTCustomClaims struct {
@@ -48,6 +48,6 @@ func ToGetDiscordTokenResponse(appToken string) GetDiscordTokenResponse {
 
 func ToRegenerateTokenResponse(appToken string) RegenerateTokenResponse {
 	return RegenerateTokenResponse{
-		AppToken: appToken,
+		AccessToken: appToken,
 	}
 }

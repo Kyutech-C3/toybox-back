@@ -42,7 +42,8 @@ func TestFavoriteRepository_Create(t *testing.T) {
 	require.Equal(t, user.ID, created.UserID)
 	require.WithinDuration(t, fav.CreatedAt, created.CreatedAt, time.Second)
 
-	exists := repo.Exists(ctx, fav)
+	exists, err := repo.Exists(ctx, fav)
+	require.NoError(t, err)
 	require.True(t, exists)
 }
 
@@ -79,7 +80,9 @@ func TestFavoriteRepository_Delete(t *testing.T) {
 	err = repo.Delete(ctx, fav)
 	require.NoError(t, err)
 
-	require.False(t, repo.Exists(ctx, fav))
+	exists, err := repo.Exists(ctx, fav)
+	require.NoError(t, err)
+	require.False(t, exists)
 }
 
 func TestFavoriteRepository_CountByWorkID(t *testing.T) {
@@ -119,10 +122,48 @@ func TestFavoriteRepository_Exists(t *testing.T) {
 	_, err := repo.Create(ctx, fav)
 	require.NoError(t, err)
 
-	require.True(t, repo.Exists(ctx, fav))
+	exists, err := repo.Exists(ctx, fav)
+	require.NoError(t, err)
+	require.True(t, exists)
 
 	otherFav := entity.NewFavorite(work.ID, otherUser.ID)
-	require.False(t, repo.Exists(ctx, otherFav))
+	exists, err = repo.Exists(ctx, otherFav)
+	require.NoError(t, err)
+	require.False(t, exists)
+}
+
+func TestFavoriteRepository_FindFavoritedWorkIDs(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := favorite.NewFavoriteRepository(db)
+
+	ctx := context.Background()
+
+	user := insertTestUser(t, db)
+	otherUser := insertTestUser(t, db)
+	favoritedWork := insertTestWork(t, db, user.ID)
+	notFavoritedWork := insertTestWork(t, db, user.ID)
+	otherUsersFavoritedWork := insertTestWork(t, db, user.ID)
+
+	_, err := repo.Create(ctx, entity.NewFavorite(favoritedWork.ID, user.ID))
+	require.NoError(t, err)
+	_, err = repo.Create(ctx, entity.NewFavorite(otherUsersFavoritedWork.ID, otherUser.ID))
+	require.NoError(t, err)
+
+	got, err := repo.FindFavoritedWorkIDs(ctx, user.ID, []uuid.UUID{favoritedWork.ID, notFavoritedWork.ID, otherUsersFavoritedWork.ID})
+	require.NoError(t, err)
+	require.ElementsMatch(t, []uuid.UUID{favoritedWork.ID}, got)
+}
+
+func TestFavoriteRepository_FindFavoritedWorkIDs_EmptyWorkIDs(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := favorite.NewFavoriteRepository(db)
+
+	ctx := context.Background()
+	user := insertTestUser(t, db)
+
+	got, err := repo.FindFavoritedWorkIDs(ctx, user.ID, []uuid.UUID{})
+	require.NoError(t, err)
+	require.Empty(t, got)
 }
 
 func insertTestUser(t *testing.T, db *bun.DB) *entity.User {

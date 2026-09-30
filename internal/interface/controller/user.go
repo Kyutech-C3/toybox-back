@@ -70,18 +70,18 @@ func (uc *UserController) GetUserByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, schema.ToUserResponse(user))
 }
 
-// GetIconAndURLByUserID godoc
-// @Summary Get icon and URL by user ID
-// @Description Get icon and URL by user ID
+// GetCurrentUser godoc
+// @Summary Get the current authenticated user
+// @Description Get the current authenticated user's ID, display name, and icon URL
 // @Tags users
 // @Produce json
-// @Success 200 {object} schema.GetIconAndURLResponse
+// @Success 200 {object} schema.GetCurrentUserResponse
 // @Failure 400 {object} echo.HTTPError
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /auth/users/me [get]
 // @Security BearerAuth
-func (uc *UserController) GetIconAndURLByUserID(c echo.Context) error {
+func (uc *UserController) GetCurrentUser(c echo.Context) error {
 	token := c.Get("user").(*jwt.Token)
 	claims := token.Claims.(*schema.JWTCustomClaims)
 	userID, err := uuid.Parse(claims.UserID)
@@ -92,21 +92,21 @@ func (uc *UserController) GetIconAndURLByUserID(c echo.Context) error {
 	if err != nil {
 		return handleUserError(err)
 	}
-	return c.JSON(http.StatusOK, schema.ToIconAndURLResponse(user))
+	return c.JSON(http.StatusOK, schema.ToCurrentUserResponse(user))
 }
 
 // UpdateUser godoc
 // @Summary Update a user
-// @Description Update a user
+// @Description Partially update a user
 // @Tags users
 // @Accept json
 // @Produce json
-// @Param user body schema.UpdateUserInput true "User to update"
+// @Param user body schema.UpdateUserInput true "Fields to update"
 // @Success 200 {object} schema.GetUserOutput
 // @Failure 400 {object} echo.HTTPError
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Router /auth/users [put]
+// @Router /auth/users [patch]
 // @Security BearerAuth
 func (uc *UserController) UpdateUser(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
@@ -120,8 +120,11 @@ func (uc *UserController) UpdateUser(c echo.Context) error {
 	if err := c.Bind(&input); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
 	}
+	if err := c.Validate(&input); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
+	}
 
-	newUser, err := uc.userusecase.UpdateUser(c.Request().Context(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID)
+	newUser, err := uc.userusecase.UpdateUser(c.Request().Context(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID)
 	if err != nil {
 		c.Logger().Error("Failed to update user:", err)
 		return handleUserError(err)

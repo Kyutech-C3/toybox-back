@@ -136,10 +136,16 @@ func TestUserController_GetUserByID(t *testing.T) {
 	}
 }
 
-func TestUserController_GetIconAndURLByUserID(t *testing.T) {
+func TestUserController_GetCurrentUser(t *testing.T) {
 	userID := uuid.New()
-	mockUser := &entity.User{ID: userID, Name: "testuser"}
-	successResponseBytes, _ := json.Marshal(schema.ToIconAndURLResponse(mockUser))
+	mockUser := &entity.User{
+		ID:          userID,
+		Name:        "testuser",
+		DisplayName: "Test User",
+		AvatarURL:   "https://example.com/icon.png",
+	}
+	successResponseBytes, _ := json.Marshal(schema.ToCurrentUserResponse(mockUser))
+	notFoundResponseBytes, _ := json.Marshal(map[string]string{"message": "ユーザーが見つかりませんでした"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
 	tests := []struct {
 		name       string
@@ -156,6 +162,16 @@ func TestUserController_GetIconAndURLByUserID(t *testing.T) {
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
+		},
+		{
+			name: "異常系: ユーザーが見つからない",
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					GetByUserID(gomock.Any(), gomock.Eq(userID)).
+					Return(nil, domainerrors.ErrUserNotFound)
+			},
+			wantStatus: http.StatusNotFound,
+			wantBody:   notFoundResponseBytes,
 		},
 		{
 			name: "異常系: Usecaseエラー",
@@ -184,7 +200,7 @@ func TestUserController_GetIconAndURLByUserID(t *testing.T) {
 			userController := controller.NewUserController(mockUsecase)
 			e.GET("/auth/users/me", func(c echo.Context) error {
 				c.Set("user", token)
-				return userController.GetIconAndURLByUserID(c)
+				return userController.GetCurrentUser(c)
 			})
 
 			req := httptest.NewRequest(http.MethodGet, "/auth/users/me", nil)
@@ -206,18 +222,21 @@ func TestUserController_UpdateUser(t *testing.T) {
 		Email:       "updated@example.com",
 		DisplayName: "Updated User",
 		Profile:     "Updated profile",
-		TwitterID:   "twitter123",
+		XUsername:   "xuser123",
 		GithubID:    "github123",
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
 
+	updatedDisplayName := "Updated User"
+	updatedProfile := "Updated profile"
+	updatedXUsername := "xuser123"
+	updatedGithubID := "github123"
 	input := schema.UpdateUserInput{
-		Email:       "updated@example.com",
-		DisplayName: "Updated User",
-		Profile:     "Updated profile",
-		TwitterID:   "twitter123",
-		GithubID:    "github123",
+		DisplayName: &updatedDisplayName,
+		Profile:     &updatedProfile,
+		XUsername:   &updatedXUsername,
+		GithubID:    &updatedGithubID,
 	}
 	inputJSON, _ := json.Marshal(input)
 
@@ -226,6 +245,9 @@ func TestUserController_UpdateUser(t *testing.T) {
 	notFoundResponseBytes, _ := json.Marshal(map[string]string{"message": "ユーザーが見つかりませんでした"})
 	failedToUpdateResponseBytes, _ := json.Marshal(map[string]string{"message": "ユーザーの更新に失敗しました"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
+
+	partialDisplayName := "New Name Only"
+	partialBody, _ := json.Marshal(schema.UpdateUserInput{DisplayName: &partialDisplayName})
 
 	tests := []struct {
 		name       string
@@ -239,7 +261,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
+					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID).
 					Return(mockUser, nil)
 			},
 			wantStatus: http.StatusOK,
@@ -253,11 +275,29 @@ func TestUserController_UpdateUser(t *testing.T) {
 			wantBody:   badRequestResponseBytes,
 		},
 		{
+			name:       "異常系: display_nameが空文字（バリデーションエラー）",
+			body:       []byte(`{"display_name": ""}`),
+			setupMock:  func(mockUserUsecase *mock.MockIUserUseCase) {},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   badRequestResponseBytes,
+		},
+		{
+			name: "正常系: display_nameのみ更新（部分更新、他フィールドは省略）",
+			body: partialBody,
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					UpdateUser(gomock.Any(), userID, &partialDisplayName, (*string)(nil), (*string)(nil), (*string)(nil)).
+					Return(mockUser, nil)
+			},
+			wantStatus: http.StatusOK,
+			wantBody:   successResponseBytes,
+		},
+		{
 			name: "異常系: ユーザーが見つからない",
 			body: inputJSON,
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
+					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID).
 					Return(nil, domainerrors.ErrUserNotFound)
 			},
 			wantStatus: http.StatusNotFound,
@@ -268,7 +308,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
+					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID).
 					Return(nil, domainerrors.ErrFailedToUpdateUser)
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -279,7 +319,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.Email, input.DisplayName, input.Profile, input.TwitterID, input.GithubID).
+					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID).
 					Return(nil, errors.New("unexpected error"))
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -302,12 +342,12 @@ func TestUserController_UpdateUser(t *testing.T) {
 			})
 
 			userController := controller.NewUserController(mockUsecase)
-			e.PUT("/auth/user", func(c echo.Context) error {
+			e.PATCH("/auth/user", func(c echo.Context) error {
 				c.Set("user", token)
 				return userController.UpdateUser(c)
 			})
 
-			req := httptest.NewRequest(http.MethodPut, "/auth/user", bytes.NewReader(tt.body))
+			req := httptest.NewRequest(http.MethodPatch, "/auth/user", bytes.NewReader(tt.body))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			rec := httptest.NewRecorder()
 

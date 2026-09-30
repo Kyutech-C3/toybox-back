@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/config"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/external/proxy"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
 	"github.com/simesaba80/toybox-back/internal/interface/schema"
 	"github.com/simesaba80/toybox-back/pkg/echovalidator"
@@ -44,7 +45,7 @@ func (r *Router) Setup() *echo.Echo {
 	r.echo.Use(middleware.Recover())
 	r.echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     config.FRONTEND_URL,
-		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		AllowCredentials: true,
 	}))
@@ -54,6 +55,17 @@ func (r *Router) Setup() *echo.Echo {
 	r.echo.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
+
+	legacyProxy, legacyProxyErr := proxy.NewLegacyToyBoxProxy(
+		config.LEGACY_TOYBOX_BASE_URL,
+		config.LEGACY_TOYBOX_PROXY_HOST,
+		controller.WriteLegacyProxyError,
+	)
+	legacyProxyController := controller.NewLegacyProxyController(legacyProxy, legacyProxyErr)
+	r.echo.GET("/api/v1/works", legacyProxyController.GetWorksV1)
+	r.echo.GET("/api/v2/works", legacyProxyController.GetWorksV2)
+	r.echo.GET("/api/v1/blogs", legacyProxyController.GetBlogs)
+	r.echo.GET("/api/v1/blogs/:blog_id", legacyProxyController.GetBlog)
 
 	// Auth
 	r.echo.GET("/auth/discord", r.AuthController.GetDiscordAuthURL)
@@ -80,18 +92,17 @@ func (r *Router) Setup() *echo.Echo {
 
 	o.GET("", r.WorkController.GetAllWorks)
 	o.GET("/users/:user_id", r.WorkController.GetWorksByUserID)
-
-	r.echo.GET("/works/:work_id", r.WorkController.GetWorkByID)
+	o.GET("/:work_id", r.WorkController.GetWorkByID)
 
 	// Comment
-	r.echo.GET("/works/:work_id/comments", r.CommentController.GetCommentsByWorkID)
-	r.echo.POST("/works/:work_id/comments", r.CommentController.CreateComment)
+	o.GET("/:work_id/comments", r.CommentController.GetCommentsByWorkID)
+	o.POST("/:work_id/comments", r.CommentController.CreateComment)
 
 	// Favorite
 	r.echo.GET("/works/:work_id/favorite", r.FavoriteController.CountFavoritesByWorkID)
 
-	// Tag (認証不要 - 一覧取得)
-	r.echo.GET("/tags", r.TagController.GetAllTags)
+	// Tag (認証任意 - 一覧取得)
+	r.echo.GET("/tags", r.TagController.GetAllTags, echojwt.WithConfig(optionalConfig))
 
 	config := echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
@@ -103,14 +114,16 @@ func (r *Router) Setup() *echo.Echo {
 	e.Use(echojwt.WithConfig(config))
 
 	// User
-	e.PUT("/users", r.UserController.UpdateUser)
-	e.GET("/users/me", r.UserController.GetIconAndURLByUserID)
+	e.PATCH("/users", r.UserController.UpdateUser)
+	e.GET("/users/me", r.UserController.GetCurrentUser)
 
 	// Work
 	e.POST("/works", r.WorkController.CreateWork)
+	e.PATCH("/works/:work_id", r.WorkController.UpdateWork)
+	e.DELETE("/works/:work_id", r.WorkController.DeleteWork)
 
 	// Asset
-	e.POST("/works/asset", r.AssetController.UploadAsset)
+	e.POST("/works/asset", r.AssetController.UploadAsset, middleware.BodyLimit("2GiB"))
 
 	// Favorite
 	e.GET("/works/:work_id/favorite/is-favorite", r.FavoriteController.IsFavorite)

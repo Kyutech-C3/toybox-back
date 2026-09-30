@@ -14,16 +14,20 @@ type UserInWorkResponse struct {
 }
 
 type GetWorkOutput struct {
-	ID           uuid.UUID           `json:"id"`
-	Title        string              `json:"title"`
-	Description  string              `json:"description"`
-	User         *UserInWorkResponse `json:"user"`
-	Visibility   string              `json:"visibility"`
-	ThumbnailURL string              `json:"thumbnail_url"`
-	Assets       []AssetResponse     `json:"assets"`
-	Tags         []TagResponse       `json:"tags"`
-	CreatedAt    string              `json:"created_at"`
-	UpdatedAt    string              `json:"updated_at"`
+	ID               uuid.UUID              `json:"id"`
+	Title            string                 `json:"title"`
+	Description      string                 `json:"description"`
+	User             *UserInWorkResponse    `json:"user"`
+	Visibility       string                 `json:"visibility"`
+	ThumbnailAssetID uuid.UUID              `json:"thumbnail_asset_id"`
+	ThumbnailURL     string                 `json:"thumbnail_url"`
+	Assets           []AssetResponse        `json:"assets"`
+	URLs             []string               `json:"urls"`
+	Tags             []TagResponse          `json:"tags"`
+	Collaborators    []CollaboratorResponse `json:"collaborators"`
+	IsFavorite       bool                   `json:"is_favorite"`
+	CreatedAt        string                 `json:"created_at"`
+	UpdatedAt        string                 `json:"updated_at"`
 }
 
 type CreateWorkInput struct {
@@ -32,8 +36,9 @@ type CreateWorkInput struct {
 	Visibility       string      `json:"visibility" validate:"required,oneof=public private draft"`
 	ThumbnailAssetID uuid.UUID   `json:"thumbnail_asset_id" validate:"required,uuid"`
 	AssetIDs         []uuid.UUID `json:"asset_ids" validate:"required,dive,uuid"`
-	URLs             []string    `json:"urls" validate:"required,dive,url"`
+	URLs             []string    `json:"urls" validate:"omitempty,dive,url"`
 	TagIDs           []uuid.UUID `json:"tag_ids" validate:"required,dive,uuid"`
+	CollaboratorIDs  []uuid.UUID `json:"collaborator_ids,omitempty" validate:"omitempty,dive,uuid"`
 }
 
 type CreateWorkOutput struct {
@@ -46,10 +51,28 @@ type CreateWorkOutput struct {
 	UpdatedAt   string    `json:"updated_at"`
 }
 
+type UpdateWorkInput struct {
+	Title            *string      `json:"title,omitempty" validate:"omitempty,max=100"`
+	Description      *string      `json:"description,omitempty"`
+	Visibility       *string      `json:"visibility,omitempty" validate:"omitempty,oneof=public private draft"`
+	ThumbnailAssetID *uuid.UUID   `json:"thumbnail_asset_id,omitempty" validate:"omitempty,uuid"`
+	AssetIDs         *[]uuid.UUID `json:"asset_ids,omitempty" validate:"omitempty,min=1,dive,uuid"`
+	URLs             *[]string    `json:"urls,omitempty" validate:"omitempty,dive,url"`
+	TagIDs           *[]uuid.UUID `json:"tag_ids,omitempty" validate:"omitempty,min=1,dive,uuid"`
+	CollaboratorIDs  *[]uuid.UUID `json:"collaborator_ids,omitempty" validate:"omitempty,dive,uuid"`
+}
+
 type GetWorksQuery struct {
-	Limit  *int   `query:"limit" validate:"omitempty,min=1,max=100"`
-	Page   *int   `query:"page" validate:"omitempty,min=1"`
-	TagIDs string `query:"tag_ids" validate:"omitempty"`
+	Limit      *int    `query:"limit" validate:"omitempty,min=1,max=100"`
+	Page       *int    `query:"page" validate:"omitempty,min=1"`
+	TagIDs     string  `query:"tag_ids" validate:"omitempty"`
+	Sort       *string `query:"sort" validate:"omitempty,oneof=newest oldest"`
+	Visibility *string `query:"visibility" validate:"omitempty,oneof=public private"`
+}
+
+type GetWorksByUserQuery struct {
+	Limit *int `query:"limit" validate:"omitempty,min=1,max=100"`
+	Page  *int `query:"page" validate:"omitempty,min=1"`
 }
 
 type WorkListResponse struct {
@@ -75,6 +98,12 @@ type TagResponse struct {
 	Name string    `json:"name"`
 }
 
+type CollaboratorResponse struct {
+	ID          uuid.UUID `json:"id"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   string    `json:"avatar_url"`
+}
+
 func ToWorkResponse(work *entity.Work) GetWorkOutput {
 	if work == nil {
 		return GetWorkOutput{}
@@ -90,17 +119,28 @@ func ToWorkResponse(work *entity.Work) GetWorkOutput {
 	}
 
 	return GetWorkOutput{
-		ID:           work.ID,
-		Title:        work.Title,
-		Description:  work.Description,
-		User:         user,
-		Visibility:   work.Visibility,
-		ThumbnailURL: work.ThumbnailURL,
-		Assets:       ToAssetResponses(work.Assets),
-		Tags:         ToTagResponses(work.Tags),
-		CreatedAt:    work.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:    work.UpdatedAt.Format(time.RFC3339),
+		ID:               work.ID,
+		Title:            work.Title,
+		Description:      work.Description,
+		User:             user,
+		Visibility:       work.Visibility,
+		ThumbnailAssetID: work.ThumbnailAssetID,
+		ThumbnailURL:     work.ThumbnailURL,
+		Assets:           ToAssetResponses(work.Assets),
+		URLs:             ToURLs(work.URLs),
+		Tags:             ToTagResponses(work.Tags),
+		Collaborators:    ToCollaboratorResponses(work.Collaborators),
+		CreatedAt:        work.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:        work.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+func ToURLs(urls []*string) []string {
+	res := make([]string, 0, len(urls))
+	for _, url := range urls {
+		res = append(res, *url)
+	}
+	return res
 }
 
 func ToCreateWorkOutput(work *entity.Work) CreateWorkOutput {
@@ -169,18 +209,27 @@ func ToTagResponses(tags []*entity.Tag) []TagResponse {
 	}
 	return res
 }
-func ToWorkListResponse(works []*entity.Work) WorkListResponse {
-	if len(works) == 0 {
-		return WorkListResponse{}
+
+func ToCollaboratorResponse(user *entity.User) CollaboratorResponse {
+	if user == nil {
+		return CollaboratorResponse{}
 	}
-	workResponses := make([]GetWorkOutput, 0, len(works))
-	for _, work := range works {
-		workResponses = append(workResponses, ToWorkResponse(work))
+
+	return CollaboratorResponse{
+		ID:          user.ID,
+		DisplayName: user.DisplayName,
+		AvatarURL:   user.AvatarURL,
 	}
-	return WorkListResponse{
-		Works:      workResponses,
-		TotalCount: len(works),
-		Page:       1,
-		Limit:      20,
+}
+
+func ToCollaboratorResponses(users []*entity.User) []CollaboratorResponse {
+	if len(users) == 0 {
+		return []CollaboratorResponse{}
 	}
+
+	res := make([]CollaboratorResponse, 0, len(users))
+	for _, user := range users {
+		res = append(res, ToCollaboratorResponse(user))
+	}
+	return res
 }

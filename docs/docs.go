@@ -15,6 +15,255 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/blogs": {
+            "get": {
+                "description": "Temporary read-only pass-through to the legacy ToyBox API. The response schema is owned by the legacy service.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-proxy"
+                ],
+                "summary": "Get blogs from the legacy API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Visibility filter",
+                        "name": "visibility",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of blogs",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Disable pagination",
+                        "name": "disable_pagination",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/blogs/{blog_id}": {
+            "get": {
+                "description": "Temporary read-only pass-through to the legacy ToyBox API. The response schema is owned by the legacy service.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-proxy"
+                ],
+                "summary": "Get a blog from the legacy API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Blog ID",
+                        "name": "blog_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/works": {
+            "get": {
+                "description": "Temporary read-only pass-through to the legacy ToyBox API. The response schema is owned by the legacy service.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-proxy"
+                ],
+                "summary": "Get works from the legacy API (v1)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of works",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Visibility filter",
+                        "name": "visibility",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Oldest work cursor",
+                        "name": "oldest_work_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Newest work cursor",
+                        "name": "newest_work_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tag names",
+                        "name": "tag_names",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tag IDs",
+                        "name": "tag_ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search text",
+                        "name": "search_word",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/works": {
+            "get": {
+                "description": "Temporary read-only pass-through to the legacy ToyBox API. The response schema is owned by the legacy service.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-proxy"
+                ],
+                "summary": "Get works from the legacy API (v2)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of works",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Visibility filter",
+                        "name": "visibility",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tag names",
+                        "name": "tag_names",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tag IDs",
+                        "name": "tag_ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search text",
+                        "name": "search_word",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/discord": {
             "get": {
                 "description": "Get Discord authentication URL",
@@ -198,13 +447,13 @@ const docTemplate = `{
             }
         },
         "/auth/users": {
-            "put": {
+            "patch": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update a user",
+                "description": "Partially update a user",
                 "consumes": [
                     "application/json"
                 ],
@@ -217,7 +466,7 @@ const docTemplate = `{
                 "summary": "Update a user",
                 "parameters": [
                     {
-                        "description": "User to update",
+                        "description": "Fields to update",
                         "name": "user",
                         "in": "body",
                         "required": true,
@@ -261,19 +510,19 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get icon and URL by user ID",
+                "description": "Get the current authenticated user's ID, display name, and icon URL",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "users"
                 ],
-                "summary": "Get icon and URL by user ID",
+                "summary": "Get the current authenticated user",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetIconAndURLResponse"
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetCurrentUserResponse"
                         }
                     },
                     "400": {
@@ -494,7 +743,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload an asset",
+                "description": "Upload an asset. Allowed extensions: png, jpg, jpeg, bmp, gif, webp, mp4, mov, mp3, wav, m4a, zip. Maximum request body size is 2GiB.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -508,7 +757,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "file",
-                        "description": "File to upload",
+                        "description": "File to upload. Allowed extensions: png, jpg, jpeg, bmp, gif, webp, mp4, mov, mp3, wav, m4a, zip. Request body must not exceed 2GiB.",
                         "name": "file",
                         "in": "formData",
                         "required": true
@@ -523,6 +772,132 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/works/{work_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a work by ID (only owner can delete)",
+                "tags": [
+                    "works"
+                ],
+                "summary": "Delete a work",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Work ID",
+                        "name": "work_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a work by ID (only owner can update)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "works"
+                ],
+                "summary": "Update a work",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Work ID",
+                        "name": "work_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Work to update",
+                        "name": "work",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetWorkOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/echo.HTTPError"
                         }
@@ -551,6 +926,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
                         }
                     },
                     "500": {
@@ -662,6 +1043,18 @@ const docTemplate = `{
                         "description": "Comma-separated tag IDs for filtering (OR search)",
                         "name": "tag_ids",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order: newest (default) or oldest",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by visibility: public or private",
+                        "name": "visibility",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -752,6 +1145,18 @@ const docTemplate = `{
                         "name": "user_id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -778,6 +1183,11 @@ const docTemplate = `{
         },
         "/works/{work_id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get a work by ID",
                 "produces": [
                     "application/json"
@@ -808,6 +1218,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/echo.HTTPError"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -825,6 +1241,11 @@ const docTemplate = `{
         },
         "/works/{work_id}/comments": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get all comments for a specific work",
                 "produces": [
                     "application/json"
@@ -858,6 +1279,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/echo.HTTPError"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -873,6 +1300,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new comment for a specific work. Can be anonymous or by a logged-in user.",
                 "consumes": [
                     "application/json"
@@ -911,6 +1343,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/echo.HTTPError"
                         }
@@ -967,6 +1405,20 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.CollaboratorResponse": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_simesaba80_toybox-back_internal_interface_schema.CommentResponse": {
             "type": "object",
             "properties": {
@@ -1010,9 +1462,6 @@ const docTemplate = `{
                 },
                 "reply_at": {
                     "type": "string"
-                },
-                "user_id": {
-                    "type": "string"
                 }
             }
         },
@@ -1054,11 +1503,16 @@ const docTemplate = `{
                 "tag_ids",
                 "thumbnail_asset_id",
                 "title",
-                "urls",
                 "visibility"
             ],
             "properties": {
                 "asset_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "collaborator_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -1122,6 +1576,20 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.GetCurrentUserResponse": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string"
+                },
+                "icon_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_simesaba80_toybox-back_internal_interface_schema.GetDiscordAuthURLResponse": {
             "type": "object",
             "properties": {
@@ -1138,17 +1606,6 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_simesaba80_toybox-back_internal_interface_schema.GetIconAndURLResponse": {
-            "type": "object",
-            "properties": {
-                "display_name": {
-                    "type": "string"
-                },
-                "icon_url": {
-                    "type": "string"
-                }
-            }
-        },
         "github_com_simesaba80_toybox-back_internal_interface_schema.GetUserOutput": {
             "type": "object",
             "properties": {
@@ -1159,9 +1616,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "display_name": {
-                    "type": "string"
-                },
-                "email": {
                     "type": "string"
                 },
                 "github_id": {
@@ -1176,10 +1630,10 @@ const docTemplate = `{
                 "profile": {
                     "type": "string"
                 },
-                "twitter_id": {
+                "updated_at": {
                     "type": "string"
                 },
-                "updated_at": {
+                "x_username": {
                     "type": "string"
                 }
             }
@@ -1193,6 +1647,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.AssetResponse"
                     }
                 },
+                "collaborators": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.CollaboratorResponse"
+                    }
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -1202,11 +1662,17 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_favorite": {
+                    "type": "boolean"
+                },
                 "tags": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagResponse"
                     }
+                },
+                "thumbnail_asset_id": {
+                    "type": "string"
                 },
                 "thumbnail_url": {
                     "type": "string"
@@ -1216,6 +1682,12 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "user": {
                     "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UserInWorkResponse"
@@ -1233,6 +1705,14 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_simesaba80_toybox-back_internal_interface_schema.TagDetailResponse": {
             "type": "object",
             "properties": {
@@ -1247,6 +1727,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "work_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -1274,18 +1757,11 @@ const docTemplate = `{
         },
         "github_com_simesaba80_toybox-back_internal_interface_schema.UpdateUserInput": {
             "type": "object",
-            "required": [
-                "display_name",
-                "email"
-            ],
             "properties": {
                 "display_name": {
                     "type": "string",
                     "maxLength": 32,
                     "minLength": 1
-                },
-                "email": {
-                    "type": "string"
                 },
                 "github_id": {
                     "type": "string"
@@ -1294,8 +1770,57 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 500
                 },
-                "twitter_id": {
+                "x_username": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput": {
+            "type": "object",
+            "properties": {
+                "asset_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "collaborator_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "tag_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "thumbnail_asset_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "visibility": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private",
+                        "draft"
+                    ]
                 }
             }
         },

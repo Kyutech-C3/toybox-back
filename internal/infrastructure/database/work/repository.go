@@ -24,12 +24,24 @@ func NewWorkRepository(db *bun.DB) *WorkRepository {
 	}
 }
 
-func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs []uuid.UUID) ([]*entity.Work, int, error) {
+func createdAtOrder(sortOrder string) string {
+	if sortOrder == "oldest" {
+		return "created_at ASC"
+	}
+	return "created_at DESC"
+}
+
+func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs []uuid.UUID, sortOrder string, visibility *string) ([]*entity.Work, int, error) {
 	var dtoWorks []*dto.Work
+
+	visibilities := []types.Visibility{types.VisibilityPublic, types.VisibilityPrivate}
+	if visibility != nil {
+		visibilities = []types.Visibility{types.Visibility(*visibility)}
+	}
 
 	countQuery := r.db.NewSelect().
 		Model(&dtoWorks).
-		Where("visibility IN (?)", bun.In([]types.Visibility{types.VisibilityPublic, types.VisibilityPrivate})).
+		Where("visibility IN (?)", bun.In(visibilities)).
 		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
 		Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)")
 
@@ -45,7 +57,7 @@ func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs [
 
 	selectQuery := r.db.NewSelect().
 		Model(&dtoWorks).
-		Where("visibility IN (?)", bun.In([]types.Visibility{types.VisibilityPublic, types.VisibilityPrivate})).
+		Where("visibility IN (?)", bun.In(visibilities)).
 		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
 		Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)")
 
@@ -60,7 +72,8 @@ func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs [
 		Relation("Tags").
 		Relation("User").
 		Relation("Thumbnail.Asset").
-		Order("created_at DESC").
+		Relation("Collaborators").
+		Order(createdAtOrder(sortOrder)).
 		Limit(limit).
 		Offset(offset).
 		Scan(ctx)
@@ -79,7 +92,7 @@ func (r *WorkRepository) GetAll(ctx context.Context, limit, offset int, tagIDs [
 	return entityWorks, total, nil
 }
 
-func (r *WorkRepository) GetAllPublic(ctx context.Context, limit, offset int, tagIDs []uuid.UUID) ([]*entity.Work, int, error) {
+func (r *WorkRepository) GetAllPublic(ctx context.Context, limit, offset int, tagIDs []uuid.UUID, sortOrder string) ([]*entity.Work, int, error) {
 	var dtoWorks []*dto.Work
 
 	countQuery := r.db.NewSelect().
@@ -115,7 +128,8 @@ func (r *WorkRepository) GetAllPublic(ctx context.Context, limit, offset int, ta
 		Relation("Tags").
 		Relation("User").
 		Relation("Thumbnail.Asset").
-		Order("created_at DESC").
+		Relation("Collaborators").
+		Order(createdAtOrder(sortOrder)).
 		Limit(limit).
 		Offset(offset).
 		Scan(ctx)
@@ -143,6 +157,7 @@ func (r *WorkRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Wor
 		Relation("URLs").
 		Relation("User").
 		Relation("Thumbnail.Asset").
+		Relation("Collaborators").
 		Where("work.id = ?", id).
 		Scan(ctx)
 	if err != nil {
@@ -155,46 +170,54 @@ func (r *WorkRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Wor
 	return dtoWork.ToWorkEntity(), nil
 }
 
-func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, public bool) ([]*entity.Work, error) {
-	var dtoWorks []*dto.Work
-	if public {
-		err := r.db.NewSelect().
-			Model(&dtoWorks).
-			Where("work.user_id = ?", userID).
-			Where("visibility IN (?)", bun.In([]types.Visibility{types.VisibilityPublic})).
-			Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
-			Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)").
-			Relation("Assets").
-			Relation("URLs").
-			Relation("Tags").
-			Relation("User").
-			Relation("Thumbnail.Asset").
-			Scan(ctx)
-		if err != nil {
-			return nil, domainerrors.ErrFailedToGetWorksByUserID
-		}
-	} else {
-		err := r.db.NewSelect().
-			Model(&dtoWorks).
-			Where("work.user_id = ?", userID).
-			Where("visibility IN (?)", bun.In([]types.Visibility{types.VisibilityPublic, types.VisibilityPrivate})).
-			Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
-			Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)").
-			Relation("Assets").
-			Relation("URLs").
-			Relation("Tags").
-			Relation("User").
-			Relation("Thumbnail.Asset").
-			Scan(ctx)
-		if err != nil {
-			return nil, domainerrors.ErrFailedToGetWorksByUserID
-		}
+func (r *WorkRepository) GetByUserID(ctx context.Context, userID uuid.UUID, includePrivate bool, includeDraft bool, limit, offset int) ([]*entity.Work, int, error) {
+	visibilities := []types.Visibility{types.VisibilityPublic}
+	if includePrivate {
+		visibilities = append(visibilities, types.VisibilityPrivate)
 	}
+	if includeDraft {
+		visibilities = append(visibilities, types.VisibilityDraft)
+	}
+
+	var dtoWorks []*dto.Work
+
+	countQuery := r.db.NewSelect().
+		Model(&dtoWorks).
+		Where("work.user_id = ?", userID).
+		Where("visibility IN (?)", bun.In(visibilities)).
+		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
+		Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)")
+
+	total, err := countQuery.Count(ctx)
+	if err != nil {
+		return nil, 0, domainerrors.ErrFailedToGetWorksByUserID
+	}
+
+	err = r.db.NewSelect().
+		Model(&dtoWorks).
+		Where("work.user_id = ?", userID).
+		Where("visibility IN (?)", bun.In(visibilities)).
+		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
+		Where("EXISTS (SELECT 1 FROM tagging WHERE tagging.work_id = work.id)").
+		Relation("Assets").
+		Relation("URLs").
+		Relation("Tags").
+		Relation("User").
+		Relation("Thumbnail.Asset").
+		Relation("Collaborators").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Scan(ctx)
+	if err != nil {
+		return nil, 0, domainerrors.ErrFailedToGetWorksByUserID
+	}
+
 	entityWorks := make([]*entity.Work, len(dtoWorks))
 	for i, dtoWork := range dtoWorks {
 		entityWorks[i] = dtoWork.ToWorkEntity()
 	}
-	return entityWorks, nil
+	return entityWorks, total, nil
 }
 
 func (r *WorkRepository) ExistsById(ctx context.Context, id uuid.UUID) (bool, error) {
@@ -248,11 +271,6 @@ func (r *WorkRepository) Create(ctx context.Context, work *entity.Work) (*entity
 		}
 	}
 
-	_, err = tx.NewUpdate().Model(&dto.Asset{}).Set("work_id = ?", dtoWork.ID).Where("id = ?", dtoWork.ThumbnailAssetID).Exec(ctx)
-	if err != nil {
-		return nil, domainerrors.ErrFailedToCreateAsset
-	}
-
 	if len(dtoWork.URLs) > 0 {
 		_, err = tx.NewInsert().Model(&dtoWork.URLs).Exec(ctx)
 		if err != nil {
@@ -274,10 +292,210 @@ func (r *WorkRepository) Create(ctx context.Context, work *entity.Work) (*entity
 		}
 	}
 
+	if len(dtoWork.Collaborators) > 0 {
+		collaborators := make([]*dto.Collaborator, len(dtoWork.Collaborators))
+		for i, collaborator := range dtoWork.Collaborators {
+			collaborators[i] = &dto.Collaborator{
+				WorkID: dtoWork.ID,
+				UserID: collaborator.ID,
+			}
+		}
+		_, err = tx.NewInsert().Model(&collaborators).Exec(ctx)
+		if err != nil {
+			return nil, domainerrors.ErrFailedToCreateWork
+		}
+	}
+
 	err = tx.Commit()
 	if err != nil {
 		return nil, domainerrors.ErrFailedToCommitTransaction
 	}
 
 	return dtoWork.ToWorkEntity(), nil
+}
+
+func (r *WorkRepository) Update(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToBeginTransaction
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	dtoWork := dto.ToWorkDTO(work)
+	_, err = tx.NewUpdate().Model(dtoWork).WherePK().Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Tagging{}).Where("work_id = ?", work.ID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+	_, err = tx.NewDelete().Model(&dto.URLInfo{}).Where("work_id = ?", work.ID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+	_, err = tx.NewDelete().Model(&dto.Thumbnail{}).Where("work_id = ?", work.ID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+	_, err = tx.NewDelete().Model(&dto.Collaborator{}).Where("work_id = ?", work.ID).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
+	keepAssetIDs := make([]uuid.UUID, len(dtoWork.Assets))
+	for i, asset := range dtoWork.Assets {
+		keepAssetIDs[i] = asset.ID
+	}
+	deleteAssetQuery := tx.NewDelete().
+		Model(&dto.Asset{}).
+		Where("work_id = ?", work.ID)
+	if len(keepAssetIDs) > 0 {
+		deleteAssetQuery = deleteAssetQuery.Where("id NOT IN (?)", bun.In(keepAssetIDs))
+	}
+	_, err = deleteAssetQuery.Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
+	thumbnail := &dto.Thumbnail{
+		WorkID:  dtoWork.ID,
+		AssetID: dtoWork.ThumbnailAssetID,
+	}
+	_, err = tx.NewInsert().Model(thumbnail).Exec(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToUpdateWork
+	}
+
+	if len(dtoWork.URLs) > 0 {
+		_, err = tx.NewInsert().Model(&dtoWork.URLs).Exec(ctx)
+		if err != nil {
+			return nil, domainerrors.ErrFailedToUpdateWork
+		}
+	}
+
+	if len(dtoWork.TagIDs) > 0 {
+		taggings := make([]*dto.Tagging, len(dtoWork.TagIDs))
+		for i, tagID := range dtoWork.TagIDs {
+			taggings[i] = &dto.Tagging{
+				WorkID: dtoWork.ID,
+				TagID:  tagID,
+			}
+		}
+		_, err = tx.NewInsert().Model(&taggings).Exec(ctx)
+		if err != nil {
+			return nil, domainerrors.ErrFailedToUpdateWork
+		}
+	}
+
+	if len(dtoWork.Collaborators) > 0 {
+		collaborators := make([]*dto.Collaborator, len(dtoWork.Collaborators))
+		for i, collaborator := range dtoWork.Collaborators {
+			collaborators[i] = &dto.Collaborator{
+				WorkID: dtoWork.ID,
+				UserID: collaborator.ID,
+			}
+		}
+		_, err = tx.NewInsert().Model(&collaborators).Exec(ctx)
+		if err != nil {
+			return nil, domainerrors.ErrFailedToUpdateWork
+		}
+	}
+
+	if len(dtoWork.Assets) > 0 {
+		for _, asset := range dtoWork.Assets {
+			_, err = tx.NewUpdate().Model(asset).Set("work_id = ?", dtoWork.ID).Where("id = ?", asset.ID).Exec(ctx)
+			if err != nil {
+				return nil, domainerrors.ErrFailedToUpdateWork
+			}
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, domainerrors.ErrFailedToCommitTransaction
+	}
+
+	return r.GetByID(ctx, work.ID)
+}
+
+func (r *WorkRepository) Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+
+	work, err := r.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if work.UserID != userID {
+		return domainerrors.ErrWorkNotOwnedByUser
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domainerrors.ErrFailedToBeginTransaction
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.NewDelete().Model(&dto.Tagging{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Thumbnail{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.URLInfo{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Collaborator{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Comment{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Favorite{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Work{}).Where("id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	_, err = tx.NewDelete().Model(&dto.Asset{}).Where("work_id = ?", id).Exec(ctx)
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteWork
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return domainerrors.ErrFailedToCommitTransaction
+	}
+
+	return nil
 }

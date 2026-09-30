@@ -85,11 +85,12 @@ func (mr *MockIFavoriteUsecaseMockRecorder) DeleteFavorite(ctx, workID, userID a
 }
 
 // IsFavorite mocks base method.
-func (m *MockIFavoriteUsecase) IsFavorite(ctx context.Context, workID, userID uuid.UUID) bool {
+func (m *MockIFavoriteUsecase) IsFavorite(ctx context.Context, workID, userID uuid.UUID) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsFavorite", ctx, workID, userID)
 	ret0, _ := ret[0].(bool)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // IsFavorite indicates an expected call of IsFavorite.

@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -24,7 +25,6 @@ type mimeType string
 const (
 	png             mimeType = "image/png"
 	jpeg            mimeType = "image/jpeg"
-	jpg             mimeType = "image/jpge"
 	bmp             mimeType = "image/bmp"
 	gif             mimeType = "image/gif"
 	webp            mimeType = "image/webp"
@@ -36,9 +36,27 @@ const (
 	wav             mimeType = "audio/wav"
 	m4a             mimeType = "audio/aac"
 	zip             mimeType = "application/zip"
-	gilf            mimeType = "model/gltf+json"
+	gltf            mimeType = "model/gltf+json"
 	defaultMimeType mimeType = "application/octet-stream"
 )
+
+var extensionToMIME = map[string]mimeType{
+	"png":  png,
+	"jpeg": jpeg,
+	"jpg":  jpeg,
+	"bmp":  bmp,
+	"gif":  gif,
+	"webp": webp,
+	"mp4":  mp4,
+	"mov":  mov,
+	"avi":  avi,
+	"flv":  flv,
+	"mp3":  mp3,
+	"wav":  wav,
+	"m4a":  m4a,
+	"zip":  zip,
+	"gltf": gltf,
+}
 
 const discordAvatarEndpointFormat = "https://cdn.discordapp.com/avatars/%s/%s.webp?size=256"
 
@@ -113,11 +131,10 @@ func (r *AssetRepository) UploadFile(ctx context.Context, file *multipart.FileHe
 }
 
 func defineMimeType(extension string) mimeType {
-	mimeType := mimeType(extension)
-	if mimeType == "" {
-		mimeType = defaultMimeType
+	if mime, ok := extensionToMIME[strings.ToLower(extension)]; ok {
+		return mime
 	}
-	return mimeType
+	return defaultMimeType
 }
 
 func (r *AssetRepository) UploadAvatar(ctx context.Context, discordUserID string, avatarHash string) (avatarURL *string, err error) {
@@ -160,4 +177,51 @@ func (r *AssetRepository) UploadAvatar(ctx context.Context, discordUserID string
 
 	newAvatarURL := fmt.Sprintf("%s/%s/%s", config.S3_BASE_URL, config.S3_BUCKET, s3Key)
 	return &newAvatarURL, nil
+}
+
+func (r *AssetRepository) ExistAllByUserID(ctx context.Context, ids []uuid.UUID, userID uuid.UUID) (bool, error) {
+	if len(ids) == 0 {
+		return true, nil
+	}
+
+	// 重複を除くことで総数が一致するようにする
+	uniqueIDs := make(map[uuid.UUID]struct{}, len(ids))
+	for _, id := range ids {
+		uniqueIDs[id] = struct{}{}
+	}
+
+	count, err := r.db.NewSelect().
+		Model(&dto.Asset{}).
+		Where("id IN (?)", bun.In(ids)).
+		Where("user_id = ?", userID).
+		Count(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return count == len(uniqueIDs), nil
+}
+
+func (r *AssetRepository) DeleteFile(ctx context.Context, url string) error {
+	// S3の完全なURLからS3オブジェクトのキーを抽出する。
+	// 例: "https://s3.REGION.amazonaws.com/BUCKET_NAME/path/to/object" から "path/to/object" を抽出
+	prefix := config.S3_BASE_URL + "/" + config.S3_BUCKET + "/"
+	key := ""
+	if len(url) > len(prefix) && url[:len(prefix)] == prefix {
+		key = url[len(prefix):]
+	}
+
+	if key == "" {
+		return fmt.Errorf("invalid asset URL: %s", url)
+	}
+
+	_, err := r.s3.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(config.S3_BUCKET),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return domainerrors.ErrFailedToDeleteAsset
+	}
+
+	return nil
 }

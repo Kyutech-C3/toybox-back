@@ -58,16 +58,16 @@ func (mr *MockICommentUsecaseMockRecorder) CreateComment(ctx, content, workID, u
 }
 
 // GetCommentsByWorkID mocks base method.
-func (m *MockICommentUsecase) GetCommentsByWorkID(ctx context.Context, workID uuid.UUID) ([]*entity.Comment, error) {
+func (m *MockICommentUsecase) GetCommentsByWorkID(ctx context.Context, workID, userID uuid.UUID) ([]*entity.Comment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCommentsByWorkID", ctx, workID)
+	ret := m.ctrl.Call(m, "GetCommentsByWorkID", ctx, workID, userID)
 	ret0, _ := ret[0].([]*entity.Comment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetCommentsByWorkID indicates an expected call of GetCommentsByWorkID.
-func (mr *MockICommentUsecaseMockRecorder) GetCommentsByWorkID(ctx, workID any) *gomock.Call {
+func (mr *MockICommentUsecaseMockRecorder) GetCommentsByWorkID(ctx, workID, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommentsByWorkID", reflect.TypeOf((*MockICommentUsecase)(nil).GetCommentsByWorkID), ctx, workID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommentsByWorkID", reflect.TypeOf((*MockICommentUsecase)(nil).GetCommentsByWorkID), ctx, workID, userID)
 }

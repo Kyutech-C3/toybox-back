@@ -9,6 +9,7 @@ import (
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/dto"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/database/types"
 )
 
 type TagRepository struct {
@@ -35,6 +36,17 @@ func (r *TagRepository) ExistAll(ctx context.Context, ids []uuid.UUID) (bool, er
 	}
 
 	return count == len(ids), nil
+}
+
+func (r *TagRepository) ExistsByName(ctx context.Context, name string) (bool, error) {
+	exists, err := r.db.NewSelect().
+		Model(&dto.Tag{}).
+		Where("name = ?", name).
+		Exists(ctx)
+	if err != nil {
+		return false, domainerrors.ErrFailedToCheckTagExists
+	}
+	return exists, nil
 }
 
 func (r *TagRepository) FindAllByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.Tag, error) {
@@ -82,4 +94,29 @@ func (r *TagRepository) FindAll(ctx context.Context) ([]*entity.Tag, error) {
 	}
 
 	return entityTags, nil
+}
+
+func (r *TagRepository) CountWorksByTag(ctx context.Context, includePrivate bool) (map[uuid.UUID]int, error) {
+	visibilities := []types.Visibility{types.VisibilityPublic}
+	if includePrivate {
+		visibilities = append(visibilities, types.VisibilityPrivate)
+	}
+
+	var taggings []dto.Tagging
+	err := r.db.NewSelect().
+		Model(&taggings).
+		Column("tag_id").
+		Join("JOIN work ON work.id = tagging.work_id").
+		Where("work.visibility IN (?)", bun.In(visibilities)).
+		Where("EXISTS (SELECT 1 FROM asset WHERE asset.work_id = work.id)").
+		Scan(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToGetAllTags
+	}
+
+	counts := make(map[uuid.UUID]int, len(taggings))
+	for _, t := range taggings {
+		counts[t.TagID]++
+	}
+	return counts, nil
 }

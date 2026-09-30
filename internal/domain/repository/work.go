@@ -8,10 +8,12 @@ import (
 )
 
 type WorkRepository interface {
-	GetAll(ctx context.Context, limit, offset int, tagIDs []uuid.UUID) ([]*entity.Work, int, error)
-	GetAllPublic(ctx context.Context, limit, offset int, tagIDs []uuid.UUID) ([]*entity.Work, int, error)
+	GetAll(ctx context.Context, limit, offset int, tagIDs []uuid.UUID, sortOrder string, visibility *string) ([]*entity.Work, int, error)
+	GetAllPublic(ctx context.Context, limit, offset int, tagIDs []uuid.UUID, sortOrder string) ([]*entity.Work, int, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error)
-	GetByUserID(ctx context.Context, userID uuid.UUID, public bool) ([]*entity.Work, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID, includePrivate bool, includeDraft bool, limit, offset int) ([]*entity.Work, int, error)
 	ExistsById(ctx context.Context, id uuid.UUID) (bool, error)
 	Create(ctx context.Context, work *entity.Work) (*entity.Work, error)
+	Update(ctx context.Context, work *entity.Work) (*entity.Work, error)
+	Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }

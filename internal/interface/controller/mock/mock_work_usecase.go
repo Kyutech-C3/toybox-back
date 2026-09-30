@@ -43,64 +43,98 @@ func (m *MockIWorkUseCase) EXPECT() *MockIWorkUseCaseMockRecorder {
 }
 
 // CreateWork mocks base method.
-func (m *MockIWorkUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID) (*entity.Work, error) {
+func (m *MockIWorkUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs, collaboratorIDs []uuid.UUID) (*entity.Work, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWork", ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs)
+	ret := m.ctrl.Call(m, "CreateWork", ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs, collaboratorIDs)
 	ret0, _ := ret[0].(*entity.Work)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateWork indicates an expected call of CreateWork.
-func (mr *MockIWorkUseCaseMockRecorder) CreateWork(ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs any) *gomock.Call {
+func (mr *MockIWorkUseCaseMockRecorder) CreateWork(ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs, collaboratorIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).CreateWork), ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).CreateWork), ctx, title, description, visibility, thumbnailAssetID, assetIDs, urls, userID, tagIDs, collaboratorIDs)
+}
+
+// DeleteWork mocks base method.
+func (m *MockIWorkUseCase) DeleteWork(ctx context.Context, id, userID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWork", ctx, id, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWork indicates an expected call of DeleteWork.
+func (mr *MockIWorkUseCaseMockRecorder) DeleteWork(ctx, id, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWork", reflect.TypeOf((*MockIWorkUseCase)(nil).DeleteWork), ctx, id, userID)
 }
 
 // GetAll mocks base method.
-func (m *MockIWorkUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID) ([]*entity.Work, int, int, int, error) {
+func (m *MockIWorkUseCase) GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID, sortOrder, visibility *string) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAll", ctx, limit, page, userID, tagIDs)
+	ret := m.ctrl.Call(m, "GetAll", ctx, limit, page, userID, tagIDs, sortOrder, visibility)
 	ret0, _ := ret[0].([]*entity.Work)
 	ret1, _ := ret[1].(int)
 	ret2, _ := ret[2].(int)
 	ret3, _ := ret[3].(int)
-	ret4, _ := ret[4].(error)
-	return ret0, ret1, ret2, ret3, ret4
+	ret4, _ := ret[4].(map[uuid.UUID]bool)
+	ret5, _ := ret[5].(error)
+	return ret0, ret1, ret2, ret3, ret4, ret5
 }
 
 // GetAll indicates an expected call of GetAll.
-func (mr *MockIWorkUseCaseMockRecorder) GetAll(ctx, limit, page, userID, tagIDs any) *gomock.Call {
+func (mr *MockIWorkUseCaseMockRecorder) GetAll(ctx, limit, page, userID, tagIDs, sortOrder, visibility any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockIWorkUseCase)(nil).GetAll), ctx, limit, page, userID, tagIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockIWorkUseCase)(nil).GetAll), ctx, limit, page, userID, tagIDs, sortOrder, visibility)
 }
 
 // GetByID mocks base method.
-func (m *MockIWorkUseCase) GetByID(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+func (m *MockIWorkUseCase) GetByID(ctx context.Context, id, userID uuid.UUID) (*entity.Work, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, userID)
 	ret0, _ := ret[0].(*entity.Work)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockIWorkUseCaseMockRecorder) GetByID(ctx, id any) *gomock.Call {
+func (mr *MockIWorkUseCaseMockRecorder) GetByID(ctx, id, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockIWorkUseCase)(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockIWorkUseCase)(nil).GetByID), ctx, id, userID)
 }
 
 // GetByUserID mocks base method.
-func (m *MockIWorkUseCase) GetByUserID(ctx context.Context, userID, authenticatedUserID uuid.UUID) ([]*entity.Work, error) {
+func (m *MockIWorkUseCase) GetByUserID(ctx context.Context, limit, page *int, userID, authenticatedUserID uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByUserID", ctx, userID, authenticatedUserID)
+	ret := m.ctrl.Call(m, "GetByUserID", ctx, limit, page, userID, authenticatedUserID)
 	ret0, _ := ret[0].([]*entity.Work)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(int)
+	ret3, _ := ret[3].(int)
+	ret4, _ := ret[4].(map[uuid.UUID]bool)
+	ret5, _ := ret[5].(error)
+	return ret0, ret1, ret2, ret3, ret4, ret5
+}
+
+// GetByUserID indicates an expected call of GetByUserID.
+func (mr *MockIWorkUseCaseMockRecorder) GetByUserID(ctx, limit, page, userID, authenticatedUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserID", reflect.TypeOf((*MockIWorkUseCase)(nil).GetByUserID), ctx, limit, page, userID, authenticatedUserID)
+}
+
+// UpdateWork mocks base method.
+func (m *MockIWorkUseCase) UpdateWork(ctx context.Context, workID, userID uuid.UUID, title, description, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs, collaboratorIDs *[]uuid.UUID) (*entity.Work, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateWork", ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs, collaboratorIDs)
+	ret0, _ := ret[0].(*entity.Work)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetByUserID indicates an expected call of GetByUserID.
-func (mr *MockIWorkUseCaseMockRecorder) GetByUserID(ctx, userID, authenticatedUserID any) *gomock.Call {
+// UpdateWork indicates an expected call of UpdateWork.
+func (mr *MockIWorkUseCaseMockRecorder) UpdateWork(ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs, collaboratorIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserID", reflect.TypeOf((*MockIWorkUseCase)(nil).GetByUserID), ctx, userID, authenticatedUserID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWork", reflect.TypeOf((*MockIWorkUseCase)(nil).UpdateWork), ctx, workID, userID, title, description, visibility, thumbnailAssetID, assetIDs, urls, tagIDs, collaboratorIDs)
 }

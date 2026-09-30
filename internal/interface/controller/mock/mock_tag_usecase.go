@@ -57,16 +57,16 @@ func (mr *MockITagUseCaseMockRecorder) Create(ctx, name any) *gomock.Call {
 }
 
 // GetAll mocks base method.
-func (m *MockITagUseCase) GetAll(ctx context.Context) ([]*entity.Tag, error) {
+func (m *MockITagUseCase) GetAll(ctx context.Context, authenticated bool) ([]*entity.Tag, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAll", ctx)
+	ret := m.ctrl.Call(m, "GetAll", ctx, authenticated)
 	ret0, _ := ret[0].([]*entity.Tag)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAll indicates an expected call of GetAll.
-func (mr *MockITagUseCaseMockRecorder) GetAll(ctx any) *gomock.Call {
+func (mr *MockITagUseCaseMockRecorder) GetAll(ctx, authenticated any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockITagUseCase)(nil).GetAll), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockITagUseCase)(nil).GetAll), ctx, authenticated)
 }

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,7 +13,7 @@ import (
 
 type ITagUseCase interface {
 	Create(ctx context.Context, name string) (*entity.Tag, error)
-	GetAll(ctx context.Context) ([]*entity.Tag, error)
+	GetAll(ctx context.Context, authenticated bool) ([]*entity.Tag, error)
 }
 
 type tagUseCase struct {
@@ -38,6 +39,15 @@ func (uc *tagUseCase) Create(ctx context.Context, name string) (*entity.Tag, err
 		UpdatedAt: now,
 	}
 	tag.NormalizeName()
+
+	exists, err := uc.tagRepo.ExistsByName(ctx, tag.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check tag existence: %w", err)
+	}
+	if exists {
+		return nil, domainerrors.ErrTagAlreadyExists
+	}
+
 	createdTag, err := uc.tagRepo.Create(ctx, tag)
 	if err != nil {
 		return nil, err
@@ -46,10 +56,19 @@ func (uc *tagUseCase) Create(ctx context.Context, name string) (*entity.Tag, err
 	return createdTag, nil
 }
 
-func (uc *tagUseCase) GetAll(ctx context.Context) ([]*entity.Tag, error) {
+func (uc *tagUseCase) GetAll(ctx context.Context, authenticated bool) ([]*entity.Tag, error) {
 	tags, err := uc.tagRepo.FindAll(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	counts, err := uc.tagRepo.CountWorksByTag(ctx, authenticated)
+	if err != nil {
+		return nil, err
+	}
+	for _, tag := range tags {
+		tag.WorkCount = counts[tag.ID]
+	}
+
 	return tags, nil
 }

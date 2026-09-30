@@ -39,7 +39,11 @@ var (
 	ErrInvalidVisibility                   = errors.New("invalid visibility")
 	ErrInvalidUserID                       = errors.New("invalid user id")
 	ErrInvalidTagIDs                       = errors.New("invalid tag ids")
+	ErrInvalidThumbnailAssetID             = errors.New("invalid thumbnail asset id")
+	ErrThumbnailAssetInAssetIDs            = errors.New("thumbnail asset id must not be included in asset ids")
+	ErrOwnerCannotBeCollaborator           = errors.New("work owner cannot be added as a collaborator")
 	ErrFailedToCreateWork                  = errors.New("failed to create work")
+	ErrFailedToUpdateWork                  = errors.New("failed to update work")
 	ErrFailedToGetAllWorksByLimitAndOffset = errors.New("failed to get all works by limit and offset")
 	ErrFailedToGetWorkById                 = errors.New("failed to get work by id")
 	ErrWorkNotFound                        = errors.New("work not found")
@@ -47,6 +51,9 @@ var (
 	ErrFailedToCreateURL                   = errors.New("failed to create url")
 	ErrFailedToCreateTagging               = errors.New("failed to create tagging")
 	ErrFailedToGetWorksByUserID            = errors.New("failed to get works by user id")
+	ErrWorkNotOwnedByUser                  = errors.New("work not owned by user")
+	ErrWorkNotViewable                     = errors.New("work is not viewable by user")
+	ErrFailedToDeleteWork                  = errors.New("failed to delete work")
 )
 
 // コメント関連のエラー定義
@@ -55,13 +62,18 @@ var (
 	ErrFailedToGetCommentById      = errors.New("failed to get comment by id")
 	ErrCommentNotFound             = errors.New("comment not found")
 	ErrFailedToCreateComment       = errors.New("failed to create comment")
+	ErrInvalidReplyAt              = errors.New("invalid reply_at")
 )
 
 // アセット関連のエラー定義
 var (
+	ErrInvalidFileName     = errors.New("invalid file name")
+	ErrUnsupportedFileType = errors.New("unsupported file type")
 	ErrFailedToOpenFile    = errors.New("failed to open file")
 	ErrFailedToUploadFile  = errors.New("failed to upload file")
 	ErrFailedToCreateAsset = errors.New("failed to create asset")
+	ErrFailedToDeleteAsset = errors.New("failed to delete asset")
+	ErrAssetNotFound       = errors.New("asset not found")
 )
 
 // いいね関連のエラー定義
@@ -71,13 +83,16 @@ var (
 	ErrFailedToCountFavoritesByWorkID = errors.New("failed to count favorites by work id")
 	ErrFavoriteAlreadyExists          = errors.New("favorite already exists")
 	ErrFavoriteNotFound               = errors.New("favorite not found")
+	ErrFailedToFindFavoritedWorkIDs   = errors.New("failed to find favorited work ids")
+	ErrFailedToCheckFavoriteExists    = errors.New("failed to check favorite existence")
 )
 
 // タグ関連のエラー定義
 var (
-	ErrTagNotFound        = errors.New("tag not found")
-	ErrFailedToCreateTag  = errors.New("failed to create tag")
-	ErrFailedToGetAllTags = errors.New("failed to get all tags")
-	ErrTagAlreadyExists   = errors.New("tag already exists")
-	ErrInvalidTagName     = errors.New("invalid tag name")
+	ErrTagNotFound            = errors.New("tag not found")
+	ErrFailedToCreateTag      = errors.New("failed to create tag")
+	ErrFailedToGetAllTags     = errors.New("failed to get all tags")
+	ErrTagAlreadyExists       = errors.New("tag already exists")
+	ErrInvalidTagName         = errors.New("invalid tag name")
+	ErrFailedToCheckTagExists = errors.New("failed to check tag existence")
 )

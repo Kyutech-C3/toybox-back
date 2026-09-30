@@ -12,6 +12,7 @@ import (
 type Tag struct {
 	ID        uuid.UUID
 	Name      string
+	WorkCount int
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -26,8 +27,12 @@ func NewTag(name string) *Tag {
 }
 
 func (t *Tag) NormalizeName() {
+	t.Name = NormalizeTagName(t.Name)
+}
+
+func NormalizeTagName(name string) string {
 	var builder strings.Builder
-	for _, r := range t.Name {
+	for _, r := range name {
 		// カタカナはそのまま保持（半角・全角どちらも変換しない）
 		if unicode.In(r, unicode.Katakana) {
 			builder.WriteRune(r)
@@ -42,5 +47,5 @@ func (t *Tag) NormalizeName() {
 			builder.WriteRune(narrow)
 		}
 	}
-	t.Name = strings.ToLower(builder.String())
+	return strings.ToLower(builder.String())
 }

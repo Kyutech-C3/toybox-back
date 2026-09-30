@@ -81,6 +81,32 @@ func TestFavoriteController_CreateFavorite(t *testing.T) {
 			wantBody:   `{"message":"既にいいねしています"}`,
 			wantJSON:   true,
 		},
+		{
+			name:   "異常系: 作品が存在しない場合はエラーを返す",
+			userID: successUserID.String(),
+			workID: successWorkID.String(),
+			setupMock: func(m *mock.MockIFavoriteUsecase) {
+				m.EXPECT().
+					CreateFavorite(gomock.Any(), successWorkID, successUserID).
+					Return(domainerrors.ErrWorkNotFound)
+			},
+			wantStatus: http.StatusNotFound,
+			wantBody:   `{"message":"作品が見つかりませんでした"}`,
+			wantJSON:   true,
+		},
+		{
+			name:   "異常系: 閲覧できない作品にはいいねできない",
+			userID: successUserID.String(),
+			workID: successWorkID.String(),
+			setupMock: func(m *mock.MockIFavoriteUsecase) {
+				m.EXPECT().
+					CreateFavorite(gomock.Any(), successWorkID, successUserID).
+					Return(domainerrors.ErrWorkNotViewable)
+			},
+			wantStatus: http.StatusForbidden,
+			wantBody:   `{"message":"この作品にはいいねできません"}`,
+			wantJSON:   true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -327,7 +353,7 @@ func TestFavoriteController_IsFavorite(t *testing.T) {
 			setupMock: func(m *mock.MockIFavoriteUsecase) {
 				m.EXPECT().
 					IsFavorite(gomock.Any(), workID, userID).
-					Return(true)
+					Return(true, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   string(trueResponse),
@@ -340,7 +366,7 @@ func TestFavoriteController_IsFavorite(t *testing.T) {
 			setupMock: func(m *mock.MockIFavoriteUsecase) {
 				m.EXPECT().
 					IsFavorite(gomock.Any(), workID, userID).
-					Return(false)
+					Return(false, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   string(falseResponse),
@@ -370,6 +396,19 @@ func TestFavoriteController_IsFavorite(t *testing.T) {
 			},
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"message":"Invalid user ID"}`,
+			wantJSON:   true,
+		},
+		{
+			name:   "異常系: いいね状態の確認に失敗した場合は500を返す",
+			userID: userID.String(),
+			workID: workID.String(),
+			setupMock: func(m *mock.MockIFavoriteUsecase) {
+				m.EXPECT().
+					IsFavorite(gomock.Any(), workID, userID).
+					Return(false, domainerrors.ErrFailedToCheckFavoriteExists)
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantBody:   `{"message":"いいね状態の確認に失敗しました"}`,
 			wantJSON:   true,
 		},
 	}

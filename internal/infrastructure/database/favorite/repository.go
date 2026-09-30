@@ -47,10 +47,28 @@ func (r *FavoriteRepository) CountByWorkID(ctx context.Context, workID uuid.UUID
 	return total, nil
 }
 
-func (r *FavoriteRepository) Exists(ctx context.Context, favorite *entity.Favorite) bool {
+func (r *FavoriteRepository) Exists(ctx context.Context, favorite *entity.Favorite) (bool, error) {
 	exists, err := r.db.NewSelect().Model(&dto.Favorite{}).Where("work_id = ? AND user_id = ?", favorite.WorkID, favorite.UserID).Exists(ctx)
 	if err != nil {
-		return false
+		return false, domainerrors.ErrFailedToCheckFavoriteExists
 	}
-	return exists
+	return exists, nil
+}
+
+func (r *FavoriteRepository) FindFavoritedWorkIDs(ctx context.Context, userID uuid.UUID, workIDs []uuid.UUID) ([]uuid.UUID, error) {
+	if len(workIDs) == 0 {
+		return []uuid.UUID{}, nil
+	}
+
+	var favorites []dto.Favorite
+	err := r.db.NewSelect().Model(&favorites).Column("work_id").Where("user_id = ? AND work_id IN (?)", userID, bun.In(workIDs)).Scan(ctx)
+	if err != nil {
+		return nil, domainerrors.ErrFailedToFindFavoritedWorkIDs
+	}
+
+	workIDsResult := make([]uuid.UUID, 0, len(favorites))
+	for _, favorite := range favorites {
+		workIDsResult = append(workIDsResult, favorite.WorkID)
+	}
+	return workIDsResult, nil
 }

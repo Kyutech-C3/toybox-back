@@ -23,6 +23,15 @@ definitions:
       work_id:
         type: string
     type: object
+  github_com_simesaba80_toybox-back_internal_interface_schema.CollaboratorResponse:
+    properties:
+      avatar_url:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: string
+    type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.CommentResponse:
     properties:
       content:
@@ -49,8 +58,6 @@ definitions:
         maxLength: 255
         type: string
       reply_at:
-        type: string
-      user_id:
         type: string
     required:
     - content
@@ -81,6 +88,10 @@ definitions:
         items:
           type: string
         type: array
+      collaborator_ids:
+        items:
+          type: string
+        type: array
       description:
         type: string
       tag_ids:
@@ -108,7 +119,6 @@ definitions:
     - tag_ids
     - thumbnail_asset_id
     - title
-    - urls
     - visibility
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.CreateWorkOutput:
@@ -128,6 +138,15 @@ definitions:
       visibility:
         type: string
     type: object
+  github_com_simesaba80_toybox-back_internal_interface_schema.GetCurrentUserResponse:
+    properties:
+      display_name:
+        type: string
+      icon_url:
+        type: string
+      id:
+        type: string
+    type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.GetDiscordAuthURLResponse:
     properties:
       url:
@@ -138,13 +157,6 @@ definitions:
       access_token:
         type: string
     type: object
-  github_com_simesaba80_toybox-back_internal_interface_schema.GetIconAndURLResponse:
-    properties:
-      display_name:
-        type: string
-      icon_url:
-        type: string
-    type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.GetUserOutput:
     properties:
       avatar_url:
@@ -152,8 +164,6 @@ definitions:
       created_at:
         type: string
       display_name:
-        type: string
-      email:
         type: string
       github_id:
         type: string
@@ -163,9 +173,9 @@ definitions:
         type: string
       profile:
         type: string
-      twitter_id:
-        type: string
       updated_at:
+        type: string
+      x_username:
         type: string
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.GetWorkOutput:
@@ -174,22 +184,34 @@ definitions:
         items:
           $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.AssetResponse'
         type: array
+      collaborators:
+        items:
+          $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.CollaboratorResponse'
+        type: array
       created_at:
         type: string
       description:
         type: string
       id:
         type: string
+      is_favorite:
+        type: boolean
       tags:
         items:
           $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagResponse'
         type: array
+      thumbnail_asset_id:
+        type: string
       thumbnail_url:
         type: string
       title:
         type: string
       updated_at:
         type: string
+      urls:
+        items:
+          type: string
+        type: array
       user:
         $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UserInWorkResponse'
       visibility:
@@ -199,6 +221,11 @@ definitions:
     properties:
       is_favorite:
         type: boolean
+    type: object
+  github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse:
+    properties:
+      message:
+        type: string
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.TagDetailResponse:
     properties:
@@ -210,6 +237,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      work_count:
+        type: integer
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.TagListResponse:
     properties:
@@ -231,18 +260,47 @@ definitions:
         maxLength: 32
         minLength: 1
         type: string
-      email:
-        type: string
       github_id:
         type: string
       profile:
         maxLength: 500
         type: string
-      twitter_id:
+      x_username:
         type: string
-    required:
-    - display_name
-    - email
+    type: object
+  github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput:
+    properties:
+      asset_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      collaborator_ids:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      tag_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      thumbnail_asset_id:
+        type: string
+      title:
+        maxLength: 100
+        type: string
+      urls:
+        items:
+          type: string
+        type: array
+      visibility:
+        enum:
+        - public
+        - private
+        - draft
+        type: string
     type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.UploadAssetResponse:
     properties:
@@ -296,6 +354,175 @@ info:
   title: Toybox API
   version: "1.0"
 paths:
+  /api/v1/blogs:
+    get:
+      description: Temporary read-only pass-through to the legacy ToyBox API. The
+        response schema is owned by the legacy service.
+      parameters:
+      - description: Visibility filter
+        in: query
+        name: visibility
+        type: string
+      - description: Maximum number of blogs
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Disable pagination
+        in: query
+        name: disable_pagination
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+      summary: Get blogs from the legacy API
+      tags:
+      - legacy-proxy
+  /api/v1/blogs/{blog_id}:
+    get:
+      description: Temporary read-only pass-through to the legacy ToyBox API. The
+        response schema is owned by the legacy service.
+      parameters:
+      - description: Blog ID
+        in: path
+        name: blog_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+      summary: Get a blog from the legacy API
+      tags:
+      - legacy-proxy
+  /api/v1/works:
+    get:
+      description: Temporary read-only pass-through to the legacy ToyBox API. The
+        response schema is owned by the legacy service.
+      parameters:
+      - description: Maximum number of works
+        in: query
+        name: limit
+        type: integer
+      - description: Visibility filter
+        in: query
+        name: visibility
+        type: string
+      - description: Oldest work cursor
+        in: query
+        name: oldest_work_id
+        type: string
+      - description: Newest work cursor
+        in: query
+        name: newest_work_id
+        type: string
+      - description: Comma-separated tag names
+        in: query
+        name: tag_names
+        type: string
+      - description: Comma-separated tag IDs
+        in: query
+        name: tag_ids
+        type: string
+      - description: Search text
+        in: query
+        name: search_word
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+      summary: Get works from the legacy API (v1)
+      tags:
+      - legacy-proxy
+  /api/v2/works:
+    get:
+      description: Temporary read-only pass-through to the legacy ToyBox API. The
+        response schema is owned by the legacy service.
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Maximum number of works
+        in: query
+        name: limit
+        type: integer
+      - description: Visibility filter
+        in: query
+        name: visibility
+        type: string
+      - description: Comma-separated tag names
+        in: query
+        name: tag_names
+        type: string
+      - description: Comma-separated tag IDs
+        in: query
+        name: tag_ids
+        type: string
+      - description: Search text
+        in: query
+        name: search_word
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.LegacyProxyErrorResponse'
+      summary: Get works from the legacy API (v2)
+      tags:
+      - legacy-proxy
   /auth/discord:
     get:
       description: Get Discord authentication URL
@@ -415,12 +642,12 @@ paths:
       tags:
       - tags
   /auth/users:
-    put:
+    patch:
       consumes:
       - application/json
-      description: Update a user
+      description: Partially update a user
       parameters:
-      - description: User to update
+      - description: Fields to update
         in: body
         name: user
         required: true
@@ -452,14 +679,15 @@ paths:
       - users
   /auth/users/me:
     get:
-      description: Get icon and URL by user ID
+      description: Get the current authenticated user's ID, display name, and icon
+        URL
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetIconAndURLResponse'
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetCurrentUserResponse'
         "400":
           description: Bad Request
           schema:
@@ -474,7 +702,7 @@ paths:
             $ref: '#/definitions/echo.HTTPError'
       security:
       - BearerAuth: []
-      summary: Get icon and URL by user ID
+      summary: Get the current authenticated user
       tags:
       - users
   /auth/works:
@@ -597,13 +825,92 @@ paths:
       summary: Check if a user has favorited a work
       tags:
       - favorites
+  /auth/works/{work_id}:
+    delete:
+      description: Delete a work by ID (only owner can delete)
+      parameters:
+      - description: Work ID
+        in: path
+        name: work_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Delete a work
+      tags:
+      - works
+    patch:
+      consumes:
+      - application/json
+      description: Update a work by ID (only owner can update)
+      parameters:
+      - description: Work ID
+        in: path
+        name: work_id
+        required: true
+        type: string
+      - description: Work to update
+        in: body
+        name: work
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetWorkOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Update a work
+      tags:
+      - works
   /auth/works/asset:
     post:
       consumes:
       - multipart/form-data
-      description: Upload an asset
+      description: 'Upload an asset. Allowed extensions: png, jpg, jpeg, bmp, gif,
+        webp, mp4, mov, mp3, wav, m4a, zip. Maximum request body size is 2GiB.'
       parameters:
-      - description: File to upload
+      - description: 'File to upload. Allowed extensions: png, jpg, jpeg, bmp, gif,
+          webp, mp4, mov, mp3, wav, m4a, zip. Request body must not exceed 2GiB.'
         in: formData
         name: file
         required: true
@@ -617,6 +924,10 @@ paths:
             $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UploadAssetResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/echo.HTTPError'
         "500":
@@ -638,6 +949,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.TagListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
         "500":
           description: Internal Server Error
           schema:
@@ -704,6 +1019,14 @@ paths:
       - description: Comma-separated tag IDs for filtering (OR search)
         in: query
         name: tag_ids
+        type: string
+      - description: 'Sort order: newest (default) or oldest'
+        in: query
+        name: sort
+        type: string
+      - description: 'Filter by visibility: public or private'
+        in: query
+        name: visibility
         type: string
       produces:
       - application/json
@@ -774,6 +1097,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
         "404":
           description: Not Found
           schema:
@@ -782,6 +1109,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/echo.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get a work by ID
       tags:
       - works
@@ -807,6 +1136,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
         "404":
           description: Not Found
           schema:
@@ -815,6 +1148,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/echo.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Get comments for a work
       tags:
       - comments
@@ -846,6 +1181,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
         "404":
           description: Not Found
           schema:
@@ -854,6 +1193,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/echo.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Create a comment for a work
       tags:
       - comments
@@ -866,6 +1207,14 @@ paths:
         name: user_id
         required: true
         type: string
+      - description: 'Limit per page (default: 20, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
       produces:
       - application/json
       responses:

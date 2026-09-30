@@ -103,8 +103,8 @@ func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します
-func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository) usecase.IWorkUseCase {
-	return usecase.NewWorkUseCase(workRepo, tagRepo)
+func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository) usecase.IWorkUseCase {
+	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo, userRepo, favoriteRepo)
 }
 
 // ProvideCommentUseCase はCommentUseCaseを提供します
@@ -134,8 +134,8 @@ func ProvideAssetUseCase(assetRepo repository.AssetRepository) usecase.IAssetUse
 }
 
 // ProvideFavoriteUseCase はFavoriteUseCaseを提供します
-func ProvideFavoriteUseCase(favoriteRepo repository.FavoriteRepository) usecase.IFavoriteUsecase {
-	return usecase.NewFavoriteUsecase(favoriteRepo)
+func ProvideFavoriteUseCase(favoriteRepo repository.FavoriteRepository, workRepo repository.WorkRepository) usecase.IFavoriteUsecase {
+	return usecase.NewFavoriteUsecase(favoriteRepo, workRepo)
 }
 
 // ProvideTagUseCase はTagUseCaseを提供します

@@ -130,7 +130,7 @@ func TestUserRepository_Update(t *testing.T) {
 		AvatarURL:     "https://example.com/avatar.png",
 		DiscordUserID: "testuser",
 		Profile:       "",
-		TwitterID:     "",
+		XUsername:     "",
 		GithubID:      "",
 	}
 	created, err := repo.Create(ctx, testUser)
@@ -140,7 +140,7 @@ func TestUserRepository_Update(t *testing.T) {
 	created.Email = "updated@example.com"
 	created.DisplayName = "Updated User"
 	created.Profile = "Updated profile"
-	created.TwitterID = "twitter123"
+	created.XUsername = "xuser123"
 	created.GithubID = "github123"
 
 	updated, err := repo.Update(ctx, created)
@@ -149,7 +149,7 @@ func TestUserRepository_Update(t *testing.T) {
 	require.Equal(t, "updated@example.com", updated.Email)
 	require.Equal(t, "Updated User", updated.DisplayName)
 	require.Equal(t, "Updated profile", updated.Profile)
-	require.Equal(t, "twitter123", updated.TwitterID)
+	require.Equal(t, "xuser123", updated.XUsername)
 	require.Equal(t, "github123", updated.GithubID)
 
 	// DBから再取得して確認
@@ -158,6 +158,6 @@ func TestUserRepository_Update(t *testing.T) {
 	require.Equal(t, "updated@example.com", found.Email)
 	require.Equal(t, "Updated User", found.DisplayName)
 	require.Equal(t, "Updated profile", found.Profile)
-	require.Equal(t, "twitter123", found.TwitterID)
+	require.Equal(t, "xuser123", found.XUsername)
 	require.Equal(t, "github123", found.GithubID)
 }
