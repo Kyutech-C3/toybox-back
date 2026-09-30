@@ -7,7 +7,9 @@ echo "Starting database migration process..."
 
 # 既存の.envファイルを読み込み
 if [ -f .env ]; then
-    export $(cat .env | xargs)
+    set -a
+    source .env
+    set +a
 fi
 
 
