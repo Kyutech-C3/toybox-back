@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -11,6 +12,8 @@ import (
 	"github.com/simesaba80/toybox-back/internal/interface/schema"
 	"github.com/simesaba80/toybox-back/internal/usecase"
 )
+
+const refreshTokenCookieLifetime = 30 * 24 * time.Hour
 
 type AuthController struct {
 	authUsecase usecase.IAuthUsecase
@@ -64,6 +67,8 @@ func (ac *AuthController) AuthenticateUser(c echo.Context) error {
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
 			Value:    refreshToken,
+			MaxAge:   int(refreshTokenCookieLifetime / time.Second),
+			Expires:  time.Now().Add(refreshTokenCookieLifetime),
 			HttpOnly: true,
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
@@ -74,6 +79,8 @@ func (ac *AuthController) AuthenticateUser(c echo.Context) error {
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
 			Value:    refreshToken,
+			MaxAge:   int(refreshTokenCookieLifetime / time.Second),
+			Expires:  time.Now().Add(refreshTokenCookieLifetime),
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
@@ -113,6 +120,8 @@ func (ac *AuthController) RegenerateToken(c echo.Context) error {
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
 			Value:    newRefreshToken,
+			MaxAge:   int(refreshTokenCookieLifetime / time.Second),
+			Expires:  time.Now().Add(refreshTokenCookieLifetime),
 			HttpOnly: true,
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
@@ -123,6 +132,8 @@ func (ac *AuthController) RegenerateToken(c echo.Context) error {
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
 			Value:    newRefreshToken,
+			MaxAge:   int(refreshTokenCookieLifetime / time.Second),
+			Expires:  time.Now().Add(refreshTokenCookieLifetime),
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
