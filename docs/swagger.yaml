@@ -717,6 +717,11 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.CreateWorkInput'
+      - default: true
+        description: Whether to notify Discord
+        in: query
+        name: post_discord
+        type: boolean
       produces:
       - application/json
       responses:

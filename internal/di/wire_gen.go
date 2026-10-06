@@ -21,6 +21,7 @@ import (
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/work"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/external/custome-jwt"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/external/oauth"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/external/webhook"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/router"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
 	"github.com/simesaba80/toybox-back/internal/usecase"
@@ -44,7 +45,8 @@ func InitializeApp() (*App, func(), error) {
 	client := ProvideS3Client()
 	assetRepository := asset.NewAssetRepository(db, client)
 	favoriteRepository := favorite.NewFavoriteRepository(db)
-	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository, assetRepository, userRepository, favoriteRepository)
+	discordWorkNotifier := webhook.NewDiscordWorkNotifier()
+	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository, assetRepository, userRepository, favoriteRepository, discordWorkNotifier)
 	workController := controller.NewWorkController(iWorkUseCase)
 	commentRepository := comment.NewCommentRepository(db)
 	iCommentUsecase := ProvideCommentUseCase(commentRepository, workRepository)
@@ -68,7 +70,7 @@ func InitializeApp() (*App, func(), error) {
 
 // wire.go:
 
-var RepositorySet = wire.NewSet(user.NewUserRepository, wire.Bind(new(repository.UserRepository), new(*user.UserRepository)), work.NewWorkRepository, wire.Bind(new(repository.WorkRepository), new(*work.WorkRepository)), comment.NewCommentRepository, wire.Bind(new(repository.CommentRepository), new(*comment.CommentRepository)), oauth.NewDiscordRepository, wire.Bind(new(repository.DiscordRepository), new(*oauth.DiscordRepository)), token.NewTokenRepository, wire.Bind(new(repository.TokenRepository), new(*token.TokenRepository)), asset.NewAssetRepository, wire.Bind(new(repository.AssetRepository), new(*asset.AssetRepository)), favorite.NewFavoriteRepository, wire.Bind(new(repository.FavoriteRepository), new(*favorite.FavoriteRepository)), tag.NewTagRepository, wire.Bind(new(repository.TagRepository), new(*tag.TagRepository)))
+var RepositorySet = wire.NewSet(user.NewUserRepository, wire.Bind(new(repository.UserRepository), new(*user.UserRepository)), work.NewWorkRepository, wire.Bind(new(repository.WorkRepository), new(*work.WorkRepository)), comment.NewCommentRepository, wire.Bind(new(repository.CommentRepository), new(*comment.CommentRepository)), oauth.NewDiscordRepository, wire.Bind(new(repository.DiscordRepository), new(*oauth.DiscordRepository)), token.NewTokenRepository, wire.Bind(new(repository.TokenRepository), new(*token.TokenRepository)), asset.NewAssetRepository, wire.Bind(new(repository.AssetRepository), new(*asset.AssetRepository)), favorite.NewFavoriteRepository, wire.Bind(new(repository.FavoriteRepository), new(*favorite.FavoriteRepository)), tag.NewTagRepository, wire.Bind(new(repository.TagRepository), new(*tag.TagRepository)), webhook.NewDiscordWorkNotifier, wire.Bind(new(repository.WorkNotifier), new(*webhook.DiscordWorkNotifier)))
 
 var UseCaseSet = wire.NewSet(
 	ProvideUserUseCase,
@@ -114,8 +116,8 @@ func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します
-func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository) usecase.IWorkUseCase {
-	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo, userRepo, favoriteRepo)
+func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository, workNotifier repository.WorkNotifier) usecase.IWorkUseCase {
+	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo, userRepo, favoriteRepo, workNotifier)
 }
 
 // ProvideCommentUseCase はCommentUseCaseを提供します

@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"slices"
 	"time"
 
@@ -16,7 +17,7 @@ type IWorkUseCase interface {
 	GetAll(ctx context.Context, limit, page *int, userID uuid.UUID, tagIDs []uuid.UUID, sortOrder *string, visibility *string) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
 	GetByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entity.Work, error)
 	GetByUserID(ctx context.Context, limit, page *int, userID uuid.UUID, authenticatedUserID uuid.UUID) ([]*entity.Work, int, int, int, map[uuid.UUID]bool, error)
-	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error)
+	CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID, notifyDiscord bool) (*entity.Work, error)
 	UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID, collaboratorIDs *[]uuid.UUID) (*entity.Work, error)
 	DeleteWork(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
@@ -27,15 +28,17 @@ type workUseCase struct {
 	assetRepo    repository.AssetRepository
 	userRepo     repository.UserRepository
 	favoriteRepo repository.FavoriteRepository
+	workNotifier repository.WorkNotifier
 }
 
-func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository) IWorkUseCase {
+func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository, workNotifier repository.WorkNotifier) IWorkUseCase {
 	return &workUseCase{
 		workRepo:     workRepo,
 		tagRepo:      tagRepo,
 		assetRepo:    assetRepo,
 		userRepo:     userRepo,
 		favoriteRepo: favoriteRepo,
+		workNotifier: workNotifier,
 	}
 }
 
@@ -155,7 +158,7 @@ func (uc *workUseCase) GetByUserID(ctx context.Context, limit, page *int, userID
 	return works, total, actualLimit, actualPage, favoritedWorkIDs, nil
 }
 
-func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID) (*entity.Work, error) {
+func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visibility string, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, urls []string, userID uuid.UUID, tagIDs []uuid.UUID, collaboratorIDs []uuid.UUID, notifyDiscord bool) (*entity.Work, error) {
 	if title == "" {
 		return nil, domainerrors.ErrInvalidTitle
 	}
@@ -231,6 +234,16 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 	if err != nil {
 		return nil, fmt.Errorf("failed to create work: %w", err)
 	}
+
+	if notifyDiscord && createdWork.Visibility != "draft" {
+		workForNotification, err := uc.workRepo.GetByID(ctx, createdWork.ID)
+		if err != nil {
+			log.Printf("failed to get created work for Discord notification: %v", err)
+		} else if err := uc.workNotifier.NotifyCreated(ctx, workForNotification); err != nil {
+			log.Printf("failed to send Discord work notification: %v", err)
+		}
+	}
+
 	return createdWork, nil
 }
 

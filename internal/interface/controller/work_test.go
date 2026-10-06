@@ -461,6 +461,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 	tests := []struct {
 		name       string
 		body       []byte
+		query      string
 		setupMock  func(mockWorkUsecase *mock.MockIWorkUseCase)
 		wantStatus int
 		wantBody   []byte
@@ -470,18 +471,38 @@ func TestWorkController_CreateWork(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), input.Title, input.Description, input.Visibility, input.ThumbnailAssetID, input.AssetIDs, input.URLs, userID, input.TagIDs, gomock.Any()).
+					CreateWork(gomock.Any(), input.Title, input.Description, input.Visibility, input.ThumbnailAssetID, input.AssetIDs, input.URLs, userID, input.TagIDs, gomock.Any(), true).
 					Return(createdWork, nil)
 			},
 			wantStatus: http.StatusCreated,
 			wantBody:   successResponseBytes,
 		},
 		{
+			name:  "正常系: Discord通知を明示的に無効化できる",
+			body:  inputJSON,
+			query: "?post_discord=false",
+			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
+				mockWorkUsecase.EXPECT().
+					CreateWork(gomock.Any(), input.Title, input.Description, input.Visibility, input.ThumbnailAssetID, input.AssetIDs, input.URLs, userID, input.TagIDs, gomock.Any(), false).
+					Return(createdWork, nil)
+			},
+			wantStatus: http.StatusCreated,
+			wantBody:   successResponseBytes,
+		},
+		{
+			name:       "異常系: Discord通知フラグがboolでない",
+			body:       inputJSON,
+			query:      "?post_discord=invalid",
+			setupMock:  func(mockWorkUsecase *mock.MockIWorkUseCase) {},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   badRequestResponseBytes,
+		},
+		{
 			name: "正常系: urlsが空でも作成できる",
 			body: emptyURLsInputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), emptyURLsInput.Title, emptyURLsInput.Description, emptyURLsInput.Visibility, emptyURLsInput.ThumbnailAssetID, emptyURLsInput.AssetIDs, emptyURLsInput.URLs, userID, emptyURLsInput.TagIDs, gomock.Any()).
+					CreateWork(gomock.Any(), emptyURLsInput.Title, emptyURLsInput.Description, emptyURLsInput.Visibility, emptyURLsInput.ThumbnailAssetID, emptyURLsInput.AssetIDs, emptyURLsInput.URLs, userID, emptyURLsInput.TagIDs, gomock.Any(), true).
 					Return(createdWork, nil)
 			},
 			wantStatus: http.StatusCreated,
@@ -499,7 +520,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).
 					Return(nil, errors.New("some error"))
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -510,7 +531,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).
 					Return(nil, domainerrors.ErrInvalidTitle)
 			},
 			wantStatus: http.StatusBadRequest,
@@ -521,7 +542,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).
 					Return(nil, domainerrors.ErrInvalidDescription)
 			},
 			wantStatus: http.StatusBadRequest,
@@ -532,7 +553,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).
 					Return(nil, domainerrors.ErrInvalidVisibility)
 			},
 			wantStatus: http.StatusBadRequest,
@@ -543,7 +564,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 			body: inputJSON,
 			setupMock: func(mockWorkUsecase *mock.MockIWorkUseCase) {
 				mockWorkUsecase.EXPECT().
-					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					CreateWork(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).
 					Return(nil, domainerrors.ErrThumbnailAssetInAssetIDs)
 			},
 			wantStatus: http.StatusBadRequest,
@@ -570,7 +591,7 @@ func TestWorkController_CreateWork(t *testing.T) {
 				return workController.CreateWork(c)
 			})
 
-			req := httptest.NewRequest(http.MethodPost, "/works", bytes.NewReader(tt.body))
+			req := httptest.NewRequest(http.MethodPost, "/works"+tt.query, bytes.NewReader(tt.body))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			rec := httptest.NewRecorder()
 
@@ -785,12 +806,12 @@ func TestWorkController_DeleteWork(t *testing.T) {
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
 
 	tests := []struct {
-		name           string
-		workID         string
-		userID         uuid.UUID
-		setupMock      func(mockWorkUsecase *mock.MockIWorkUseCase)
-		wantStatus     int
-		wantBody       []byte
+		name            string
+		workID          string
+		userID          uuid.UUID
+		setupMock       func(mockWorkUsecase *mock.MockIWorkUseCase)
+		wantStatus      int
+		wantBody        []byte
 		expectNoContent bool
 	}{
 		{

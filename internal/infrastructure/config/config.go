@@ -18,6 +18,7 @@ var (
 	POSTGRES_HOST            string
 	DISCORD_CLIENT_ID        string
 	DISCORD_CLIENT_SECRET    string
+	DISCORD_WEBHOOK_URL      string
 	TOKEN_SECRET             string
 	DISCORD_GUILD_IDS        []string
 	REDIRECT_URL             string
@@ -46,6 +47,7 @@ func LoadEnv() {
 	POSTGRES_HOST = os.Getenv("POSTGRES_HOST")
 	DISCORD_CLIENT_ID = os.Getenv("DISCORD_CLIENT_ID")
 	DISCORD_CLIENT_SECRET = os.Getenv("DISCORD_CLIENT_SECRET")
+	DISCORD_WEBHOOK_URL = os.Getenv("DISCORD_WEBHOOK_URL")
 	TOKEN_SECRET = os.Getenv("TOKEN_SECRET")
 	DISCORD_GUILD_IDS = strings.Split(os.Getenv("DISCORD_GUILD_IDS"), ",")
 	REDIRECT_URL = os.Getenv("REDIRECT_URL")

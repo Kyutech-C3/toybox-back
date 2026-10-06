@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -212,6 +213,7 @@ func (wc *WorkController) GetWorksByUserID(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param work body schema.CreateWorkInput true "Work to create"
+// @Param post_discord query bool false "Whether to notify Discord" default(true)
 // @Success 201 {object} schema.CreateWorkOutput
 // @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
@@ -232,6 +234,13 @@ func (wc *WorkController) CreateWork(c echo.Context) error {
 	if err := c.Validate(&input); err != nil {
 		return handleWorkError(c, domainerrors.ErrInvalidRequestBody)
 	}
+	notifyDiscord := true
+	if rawNotifyDiscord := c.QueryParam("post_discord"); rawNotifyDiscord != "" {
+		notifyDiscord, err = strconv.ParseBool(rawNotifyDiscord)
+		if err != nil {
+			return handleWorkError(c, domainerrors.ErrInvalidRequestBody)
+		}
+	}
 	// リクエストボディからuser_idを取得し、UUIDにパース
 
 	createdWork, err := wc.workUsecase.CreateWork(
@@ -245,6 +254,7 @@ func (wc *WorkController) CreateWork(c echo.Context) error {
 		userID,
 		input.TagIDs,
 		input.CollaboratorIDs,
+		notifyDiscord,
 	)
 	if err != nil {
 		c.Logger().Error("WorkUseCase.CreateWork error:", err)

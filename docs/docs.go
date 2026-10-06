@@ -573,6 +573,13 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.CreateWorkInput"
                         }
+                    },
+                    {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Whether to notify Discord",
+                        "name": "post_discord",
+                        "in": "query"
                     }
                 ],
                 "responses": {
