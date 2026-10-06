@@ -248,11 +248,11 @@ func TestAuthUsecase_AuthenticateUser(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Empty(t, appToken)
-				assert.Empty(t, refreshToken)
+				assert.Nil(t, refreshToken)
 			} else {
 				assert.NoError(t, err)
 				assert.NotEmpty(t, appToken)
-				assert.NotEmpty(t, refreshToken)
+				assert.NotNil(t, refreshToken)
 			}
 		})
 	}

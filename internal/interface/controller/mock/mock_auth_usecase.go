@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	uuid "github.com/google/uuid"
+	entity "github.com/simesaba80/toybox-back/internal/domain/entity"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,11 +43,11 @@ func (m *MockIAuthUsecase) EXPECT() *MockIAuthUsecaseMockRecorder {
 }
 
 // AuthenticateUser mocks base method.
-func (m *MockIAuthUsecase) AuthenticateUser(ctx context.Context, code string) (string, string, error) {
+func (m *MockIAuthUsecase) AuthenticateUser(ctx context.Context, code string) (string, *entity.Token, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AuthenticateUser", ctx, code)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
+	ret1, _ := ret[1].(*entity.Token)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
@@ -87,11 +88,11 @@ func (mr *MockIAuthUsecaseMockRecorder) Logout(ctx, refreshToken any) *gomock.Ca
 }
 
 // RegenerateToken mocks base method.
-func (m *MockIAuthUsecase) RegenerateToken(ctx context.Context, refreshToken uuid.UUID) (string, string, error) {
+func (m *MockIAuthUsecase) RegenerateToken(ctx context.Context, refreshToken uuid.UUID) (string, *entity.Token, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegenerateToken", ctx, refreshToken)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
+	ret1, _ := ret[1].(*entity.Token)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }

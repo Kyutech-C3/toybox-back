@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/config"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
@@ -100,6 +101,8 @@ func TestAuthController_AuthenticateUser(t *testing.T) {
 	originalEnv := config.ENV
 	t.Cleanup(func() { config.ENV = originalEnv })
 
+	refreshToken := &entity.Token{RefreshToken: uuid.New(), ExpiredAt: time.Now().Add(30 * 24 * time.Hour)}
+
 	successResponseBytes, _ := json.Marshal(schema.ToGetDiscordTokenResponse("app-token"))
 	codeRequiredResponseBytes, _ := json.Marshal(map[string]string{"message": "code is required"})
 	userNotAllowedResponseBytes, _ := json.Marshal(map[string]string{"message": "ユーザーは許可されたDiscordギルドに所属していません"})
@@ -121,7 +124,7 @@ func TestAuthController_AuthenticateUser(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					AuthenticateUser(gomock.Any(), "test-code").
-					Return("app-token", "refresh-token", nil)
+					Return("app-token", refreshToken, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
@@ -133,7 +136,7 @@ func TestAuthController_AuthenticateUser(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					AuthenticateUser(gomock.Any(), "test-code").
-					Return("app-token", "refresh-token", nil)
+					Return("app-token", refreshToken, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
@@ -151,7 +154,7 @@ func TestAuthController_AuthenticateUser(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					AuthenticateUser(gomock.Any(), "another-code").
-					Return("", "", domainerrors.ErrUserNotAllowedGuild)
+					Return("", nil, domainerrors.ErrUserNotAllowedGuild)
 			},
 			wantStatus: http.StatusForbidden,
 			wantBody:   userNotAllowedResponseBytes,
@@ -162,7 +165,7 @@ func TestAuthController_AuthenticateUser(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					AuthenticateUser(gomock.Any(), "discord-error").
-					Return("", "", domainerrors.ErrFaileRequestToDiscord)
+					Return("", nil, domainerrors.ErrFaileRequestToDiscord)
 			},
 			wantStatus: http.StatusInternalServerError,
 			wantBody:   failedRequestResponseBytes,
@@ -173,7 +176,7 @@ func TestAuthController_AuthenticateUser(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					AuthenticateUser(gomock.Any(), "unexpected").
-					Return("", "", errors.New("unexpected error"))
+					Return("", nil, errors.New("unexpected error"))
 			},
 			wantStatus: http.StatusInternalServerError,
 			wantBody:   internalErrorResponseBytes,
@@ -198,13 +201,12 @@ func TestAuthController_AuthenticateUser(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/auth/discord/callback"+tt.query, nil)
 			rec := httptest.NewRecorder()
 
-			before := time.Now()
 			e.ServeHTTP(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			assert.JSONEq(t, string(tt.wantBody), rec.Body.String())
 			if tt.wantStatus == http.StatusOK {
-				assertRefreshTokenCookieLifetime(t, rec, before)
+				assertRefreshTokenCookie(t, rec, refreshToken)
 			}
 		})
 	}
@@ -213,6 +215,8 @@ func TestAuthController_AuthenticateUser(t *testing.T) {
 func TestAuthController_RegenerateToken(t *testing.T) {
 	originalEnv := config.ENV
 	t.Cleanup(func() { config.ENV = originalEnv })
+
+	regeneratedToken := &entity.Token{RefreshToken: uuid.New(), ExpiredAt: time.Now().Add(30 * 24 * time.Hour)}
 
 	successResponseBytes, _ := json.Marshal(schema.ToRegenerateTokenResponse("new-app-token"))
 	refreshRequiredResponseBytes, _ := json.Marshal(map[string]string{"message": "Refresh token is required"})
@@ -238,7 +242,7 @@ func TestAuthController_RegenerateToken(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					RegenerateToken(gomock.Any(), validRefreshToken).
-					Return("new-app-token", "new-refresh-token", nil)
+					Return("new-app-token", regeneratedToken, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
@@ -250,7 +254,7 @@ func TestAuthController_RegenerateToken(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					RegenerateToken(gomock.Any(), validRefreshToken).
-					Return("new-app-token", "new-refresh-token", nil)
+					Return("new-app-token", regeneratedToken, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
@@ -268,7 +272,7 @@ func TestAuthController_RegenerateToken(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					RegenerateToken(gomock.Any(), expiredRefreshToken).
-					Return("", "", domainerrors.ErrRefreshTokenExpired)
+					Return("", nil, domainerrors.ErrRefreshTokenExpired)
 			},
 			wantStatus: http.StatusBadRequest,
 			wantBody:   expiredResponseBytes,
@@ -279,7 +283,7 @@ func TestAuthController_RegenerateToken(t *testing.T) {
 			setupMock: func(mockAuthUsecase *mock.MockIAuthUsecase) {
 				mockAuthUsecase.EXPECT().
 					RegenerateToken(gomock.Any(), unexpectedRefreshToken).
-					Return("", "", errors.New("unexpected error"))
+					Return("", nil, errors.New("unexpected error"))
 			},
 			wantStatus: http.StatusInternalServerError,
 			wantBody:   internalErrorResponseBytes,
@@ -308,27 +312,25 @@ func TestAuthController_RegenerateToken(t *testing.T) {
 			}
 			rec := httptest.NewRecorder()
 
-			before := time.Now()
 			e.ServeHTTP(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			assert.JSONEq(t, string(tt.wantBody), rec.Body.String())
 			if tt.wantStatus == http.StatusOK {
-				assertRefreshTokenCookieLifetime(t, rec, before)
+				assertRefreshTokenCookie(t, rec, regeneratedToken)
 			}
 		})
 	}
 }
 
-func assertRefreshTokenCookieLifetime(t *testing.T, rec *httptest.ResponseRecorder, before time.Time) {
+func assertRefreshTokenCookie(t *testing.T, rec *httptest.ResponseRecorder, want *entity.Token) {
 	t.Helper()
 	cookies := rec.Result().Cookies()
 	require.Len(t, cookies, 1)
 	assert.Equal(t, "refresh_token", cookies[0].Name)
-	assert.Equal(t, 30*24*60*60, cookies[0].MaxAge)
-	assert.WithinRange(t, cookies[0].Expires,
-		before.Add(30*24*time.Hour).Truncate(time.Second),
-		time.Now().Add(30*24*time.Hour).Truncate(time.Second))
+	assert.Equal(t, want.RefreshToken.String(), cookies[0].Value)
+	assert.WithinDuration(t, want.ExpiredAt, cookies[0].Expires, time.Second)
+	assert.WithinDuration(t, want.ExpiredAt, time.Now().Add(time.Duration(cookies[0].MaxAge)*time.Second), 2*time.Second)
 }
 
 func TestAuthController_Logout(t *testing.T) {
