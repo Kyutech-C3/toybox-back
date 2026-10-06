@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -59,11 +60,14 @@ func (ac *AuthController) AuthenticateUser(c echo.Context) error {
 		c.Logger().Error("Failed to authenticate user: %w", err)
 		return handleAuthError(c, err)
 	}
+	maxAge := int(time.Until(refreshToken.ExpiredAt).Seconds())
 	switch config.ENV {
 	case "prod":
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
-			Value:    refreshToken,
+			Value:    refreshToken.RefreshToken.String(),
+			MaxAge:   maxAge,
+			Expires:  refreshToken.ExpiredAt,
 			HttpOnly: true,
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
@@ -73,7 +77,9 @@ func (ac *AuthController) AuthenticateUser(c echo.Context) error {
 	case "dev":
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
-			Value:    refreshToken,
+			Value:    refreshToken.RefreshToken.String(),
+			MaxAge:   maxAge,
+			Expires:  refreshToken.ExpiredAt,
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
@@ -108,11 +114,14 @@ func (ac *AuthController) RegenerateToken(c echo.Context) error {
 	if err != nil {
 		return handleAuthError(c, err)
 	}
+	maxAge := int(time.Until(newRefreshToken.ExpiredAt).Seconds())
 	switch config.ENV {
 	case "prod":
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
-			Value:    newRefreshToken,
+			Value:    newRefreshToken.RefreshToken.String(),
+			MaxAge:   maxAge,
+			Expires:  newRefreshToken.ExpiredAt,
 			HttpOnly: true,
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
@@ -122,7 +131,9 @@ func (ac *AuthController) RegenerateToken(c echo.Context) error {
 	case "dev":
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
-			Value:    newRefreshToken,
+			Value:    newRefreshToken.RefreshToken.String(),
+			MaxAge:   maxAge,
+			Expires:  newRefreshToken.ExpiredAt,
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
