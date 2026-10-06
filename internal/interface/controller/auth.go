@@ -13,8 +13,6 @@ import (
 	"github.com/simesaba80/toybox-back/internal/usecase"
 )
 
-const refreshTokenCookieLifetime = 30 * 24 * time.Hour
-
 type AuthController struct {
 	authUsecase usecase.IAuthUsecase
 }
@@ -62,13 +60,14 @@ func (ac *AuthController) AuthenticateUser(c echo.Context) error {
 		c.Logger().Error("Failed to authenticate user: %w", err)
 		return handleAuthError(c, err)
 	}
+	maxAge := int(time.Until(refreshToken.ExpiredAt).Seconds())
 	switch config.ENV {
 	case "prod":
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
-			Value:    refreshToken,
-			MaxAge:   int(refreshTokenCookieLifetime / time.Second),
-			Expires:  time.Now().Add(refreshTokenCookieLifetime),
+			Value:    refreshToken.RefreshToken.String(),
+			MaxAge:   maxAge,
+			Expires:  refreshToken.ExpiredAt,
 			HttpOnly: true,
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
@@ -78,9 +77,9 @@ func (ac *AuthController) AuthenticateUser(c echo.Context) error {
 	case "dev":
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
-			Value:    refreshToken,
-			MaxAge:   int(refreshTokenCookieLifetime / time.Second),
-			Expires:  time.Now().Add(refreshTokenCookieLifetime),
+			Value:    refreshToken.RefreshToken.String(),
+			MaxAge:   maxAge,
+			Expires:  refreshToken.ExpiredAt,
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
@@ -115,13 +114,14 @@ func (ac *AuthController) RegenerateToken(c echo.Context) error {
 	if err != nil {
 		return handleAuthError(c, err)
 	}
+	maxAge := int(time.Until(newRefreshToken.ExpiredAt).Seconds())
 	switch config.ENV {
 	case "prod":
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
-			Value:    newRefreshToken,
-			MaxAge:   int(refreshTokenCookieLifetime / time.Second),
-			Expires:  time.Now().Add(refreshTokenCookieLifetime),
+			Value:    newRefreshToken.RefreshToken.String(),
+			MaxAge:   maxAge,
+			Expires:  newRefreshToken.ExpiredAt,
 			HttpOnly: true,
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
@@ -131,9 +131,9 @@ func (ac *AuthController) RegenerateToken(c echo.Context) error {
 	case "dev":
 		cookie := &http.Cookie{
 			Name:     "refresh_token",
-			Value:    newRefreshToken,
-			MaxAge:   int(refreshTokenCookieLifetime / time.Second),
-			Expires:  time.Now().Add(refreshTokenCookieLifetime),
+			Value:    newRefreshToken.RefreshToken.String(),
+			MaxAge:   maxAge,
+			Expires:  newRefreshToken.ExpiredAt,
 			HttpOnly: true,
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
