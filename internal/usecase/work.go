@@ -27,15 +27,17 @@ type workUseCase struct {
 	assetRepo    repository.AssetRepository
 	userRepo     repository.UserRepository
 	favoriteRepo repository.FavoriteRepository
+	webhookRepo  repository.WebhookNotifierRepository
 }
 
-func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository) IWorkUseCase {
+func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository, webhookRepo repository.WebhookNotifierRepository) IWorkUseCase {
 	return &workUseCase{
 		workRepo:     workRepo,
 		tagRepo:      tagRepo,
 		assetRepo:    assetRepo,
 		userRepo:     userRepo,
 		favoriteRepo: favoriteRepo,
+		webhookRepo:  webhookRepo,
 	}
 }
 
