@@ -27,6 +27,7 @@ var (
 	REGION_NAME              string
 	LEGACY_TOYBOX_BASE_URL   string
 	LEGACY_TOYBOX_PROXY_HOST string
+	WEBHOOK_URL              string
 )
 
 // .envを呼び出します。
@@ -55,4 +56,5 @@ func LoadEnv() {
 	REGION_NAME = os.Getenv("REGION_NAME")
 	LEGACY_TOYBOX_BASE_URL = os.Getenv("LEGACY_TOYBOX_BASE_URL")
 	LEGACY_TOYBOX_PROXY_HOST = os.Getenv("LEGACY_TOYBOX_PROXY_HOST")
+	WEBHOOK_URL = os.Getenv("WEBHOOK_URL")
 }

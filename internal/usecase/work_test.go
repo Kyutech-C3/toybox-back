@@ -344,6 +344,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
@@ -352,7 +353,7 @@ func TestWorkUseCase_GetAll(t *testing.T) {
 				tt.setupFavoriteMock(mockFavoriteRepo)
 			}
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 
 			got, total, limit, page, _, err := uc.GetAll(context.Background(), tt.limit, tt.page, tt.userID, tt.tagIDs, tt.sort, tt.visibility)
 
@@ -493,11 +494,12 @@ func TestWorkUseCase_GetByID(t *testing.T) {
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
 			tt.setupWorkMock(mockWorkRepo, tt.workID)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 
 			got, err := uc.GetByID(context.Background(), tt.workID, tt.userID)
 
@@ -766,13 +768,14 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
 			tt.setupMock(mockWorkRepo, tt.userID)
 			tt.setupAssetMock(mockAssetRepo)
 			if tt.setupFavoriteMock != nil {
 				tt.setupFavoriteMock(mockFavoriteRepo)
 			}
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 
 			got, total, limit, page, _, err := uc.GetByUserID(context.Background(), tt.limit, tt.page, tt.userID, tt.authenticatedUserID)
 
@@ -813,6 +816,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 		setupWorkMock    func(*mock.MockWorkRepository)
 		setupTagMock     func(*mock.MockTagRepository, []uuid.UUID)
 		setupAssetMock   func(*mock.MockAssetRepository, uuid.UUID, []uuid.UUID, uuid.UUID)
+		setupWebhookMock func(*mock.MockWebhookNotifierRepository)
 		wantErr          bool
 	}{
 		{
@@ -854,6 +858,17 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Return(true, nil).
 					Times(1)
 			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
+				m.EXPECT().
+					WebhookNotify(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, work *entity.Work) error {
+						assert.NotEqual(t, uuid.Nil, work.ID)
+						assert.Equal(t, "New Work", work.Title)
+						assert.Equal(t, "public", work.Visibility)
+						return nil
+					}).
+					Times(1)
+			},
 			wantErr: false,
 		},
 		{
@@ -871,9 +886,11 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
-			wantErr:        true,
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {},
+			wantErr:          true,
 		},
 		{
 			name:             "異常系: サムネイルと同じアセットIDがasset_idsに含まれる",
@@ -890,9 +907,11 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
-			wantErr:        true,
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {},
+			wantErr:          true,
 		},
 		{
 			name:             "異常系: バリデーションエラー(説明空)",
@@ -909,9 +928,11 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
-			wantErr:        true,
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {},
+			wantErr:          true,
 		},
 		{
 			name:             "異常系: バリデーションエラー(可視性空)",
@@ -928,9 +949,11 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
-			wantErr:        true,
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {},
+			wantErr:          true,
 		},
 		{
 			name:             "異常系: バリデーションエラー(タグなし)",
@@ -947,9 +970,11 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			setupTagMock:   func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
-			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
-			wantErr:        true,
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {},
+			wantErr:          true,
 		},
 		{
 			name:             "異常系: タグが存在しない",
@@ -972,8 +997,10 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Return(false, nil).
 					Times(1)
 			},
-			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {},
-			wantErr:        true,
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {},
+			wantErr:          true,
 		},
 		{
 			name:             "異常系: リポジトリエラー",
@@ -1006,6 +1033,11 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
 					Return(true, nil).
 					Times(1)
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
+				m.EXPECT().
+					WebhookNotify(gomock.Any(), gomock.Any()).
+					Times(0)
 			},
 			wantErr: true,
 		},
@@ -1040,7 +1072,136 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 					Return(false, nil).
 					Times(1)
 			},
-			wantErr: true,
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {},
+			wantErr:          true,
+		},
+		{
+			name:             "正常系: draft作品は通知しない",
+			title:            "New Work",
+			description:      "New Description",
+			visibility:       "draft",
+			thumbnailAssetID: uuid.New(),
+			assetIDs:         []uuid.UUID{uuid.New()},
+			urls:             []string{"https://example.com"},
+			userID:           uuid.New(),
+			tagIDs:           []uuid.UUID{uuid.New()},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+						return work, nil
+					}).
+					Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {
+				m.EXPECT().
+					ExistAll(gomock.Any(), gomock.Eq(tagIDs)).
+					Return(true, nil).
+					Times(1)
+				m.EXPECT().
+					FindAllByIDs(gomock.Any(), gomock.Eq(tagIDs)).
+					Return([]*entity.Tag{{ID: tagIDs[0], Name: "Tag1"}}, nil).
+					Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
+				m.EXPECT().
+					WebhookNotify(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantErr: false,
+		},
+		{
+			name:             "正常系: private作品も通知する",
+			title:            "New Work",
+			description:      "New Description",
+			visibility:       "private",
+			thumbnailAssetID: uuid.New(),
+			assetIDs:         []uuid.UUID{uuid.New()},
+			urls:             []string{"https://example.com"},
+			userID:           uuid.New(),
+			tagIDs:           []uuid.UUID{uuid.New()},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+						return work, nil
+					}).
+					Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {
+				m.EXPECT().
+					ExistAll(gomock.Any(), gomock.Eq(tagIDs)).
+					Return(true, nil).
+					Times(1)
+				m.EXPECT().
+					FindAllByIDs(gomock.Any(), gomock.Eq(tagIDs)).
+					Return([]*entity.Tag{{ID: tagIDs[0], Name: "Tag1"}}, nil).
+					Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
+				m.EXPECT().
+					WebhookNotify(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, work *entity.Work) error {
+						assert.Equal(t, "private", work.Visibility)
+						return nil
+					}).
+					Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:             "正常系: Webhook通知に失敗しても作品作成は成功する",
+			title:            "New Work",
+			description:      "New Description",
+			visibility:       "public",
+			thumbnailAssetID: uuid.New(),
+			assetIDs:         []uuid.UUID{uuid.New()},
+			urls:             []string{"https://example.com"},
+			userID:           uuid.New(),
+			tagIDs:           []uuid.UUID{uuid.New()},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+						return work, nil
+					}).
+					Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {
+				m.EXPECT().
+					ExistAll(gomock.Any(), gomock.Eq(tagIDs)).
+					Return(true, nil).
+					Times(1)
+				m.EXPECT().
+					FindAllByIDs(gomock.Any(), gomock.Eq(tagIDs)).
+					Return([]*entity.Tag{{ID: tagIDs[0], Name: "Tag1"}}, nil).
+					Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
+				m.EXPECT().
+					WebhookNotify(gomock.Any(), gomock.Any()).
+					Return(errors.New("webhook error")).
+					Times(1)
+			},
+			wantErr: false,
 		},
 	}
 
@@ -1054,12 +1215,14 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo, tt.tagIDs)
 			tt.setupAssetMock(mockAssetRepo, tt.thumbnailAssetID, tt.assetIDs, tt.userID)
+			tt.setupWebhookMock(mockWebhookRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 			got, err := uc.CreateWork(context.Background(), tt.title, tt.description, tt.visibility, tt.thumbnailAssetID, tt.assetIDs, tt.urls, tt.userID, tt.tagIDs, []uuid.UUID{})
 
 			if tt.wantErr {
@@ -1406,12 +1569,13 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo, tt.assetIDs, tt.userID)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 			got, err := uc.UpdateWork(context.Background(), tt.workID, tt.userID, tt.title, tt.description, nil, tt.thumbnailAssetID, tt.assetIDs, nil, nil, nil)
 
 			if tt.wantErr {
@@ -1527,11 +1691,12 @@ func TestWorkUseCase_DeleteWork(t *testing.T) {
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl) // Not used, but included for constructor consistency
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupAssetMock(mockAssetRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 			err := uc.DeleteWork(context.Background(), tt.workID, tt.userID)
 
 			if tt.wantErr {
@@ -1663,13 +1828,15 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 			tt.setupUserMock(mockUserRepo)
+			mockWebhookRepo.EXPECT().WebhookNotify(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 			got, err := uc.CreateWork(context.Background(), "Title", "Description", "public", thumbnailAssetID, []uuid.UUID{assetID}, []string{"https://example.com"}, userID, []uuid.UUID{tagID}, tt.collaboratorIDs)
 
 			if tt.wantErr {
@@ -1795,13 +1962,14 @@ func TestWorkUseCase_UpdateWork_WithCollaborators(t *testing.T) {
 			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
 			mockUserRepo := mock.NewMockUserRepository(ctrl)
 			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
 
 			tt.setupWorkMock(mockWorkRepo)
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 			tt.setupUserMock(mockUserRepo)
 
-			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo)
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 			got, err := uc.UpdateWork(context.Background(), workID, userID, nil, nil, nil, nil, nil, nil, nil, tt.collaboratorIDs)
 
 			if tt.wantErr {

@@ -250,7 +250,6 @@ func (wc *WorkController) CreateWork(c echo.Context) error {
 		c.Logger().Error("WorkUseCase.CreateWork error:", err)
 		return handleWorkError(c, err)
 	}
-
 	return c.JSON(http.StatusCreated, schema.ToCreateWorkOutput(createdWork))
 }
 
