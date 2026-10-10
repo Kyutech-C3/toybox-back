@@ -7,5 +7,5 @@ import (
 )
 
 type WebhookNotifierRepository interface {
-	WebhookNotify(ctx context.Context, work *entity.Work) error
+	WebhookNotify(ctx context.Context, work *entity.Work)
 }

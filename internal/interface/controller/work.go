@@ -250,19 +250,6 @@ func (wc *WorkController) CreateWork(c echo.Context) error {
 		c.Logger().Error("WorkUseCase.CreateWork error:", err)
 		return handleWorkError(c, err)
 	}
-
-	type DiscordWebhookData struct {
-		UserName  string `json:"user_name"`
-		AvatarURL string `json:"avatar_url"`
-		Embed     struct {
-			Title          string `json:"title"`
-			URL            string `json:"url"`
-			Description    string `json:"description"`
-			Color          int    `json:"color"`
-			ThumbnailImage string `json:"image"`
-		} `json:"embed"`
-	}
-
 	return c.JSON(http.StatusCreated, schema.ToCreateWorkOutput(createdWork))
 }
 
