@@ -6,7 +6,7 @@ services:
       - .env
     volumes: !reset []
     dns: !reset []
-    depends_on: !reset
+    depends_on: !override
       db:
         condition: service_healthy
 
