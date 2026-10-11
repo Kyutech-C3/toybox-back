@@ -252,6 +252,7 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 	if work.UserID != userID {
 		return nil, domainerrors.ErrWorkNotOwnedByUser
 	}
+	previousVisibility := work.Visibility
 
 	if title != nil {
 		work.Title = *title
@@ -369,6 +370,14 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 		if err := uc.assetRepo.DeleteFile(ctx, asset.URL); err != nil {
 			return nil, fmt.Errorf("failed to delete removed asset file: %w", err)
 		}
+	}
+
+	updatedWork, err = uc.workRepo.GetByID(ctx, updatedWork.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated work by ID %s: %w", updatedWork.ID.String(), err)
+	}
+	if previousVisibility == "draft" && (updatedWork.Visibility == "public" || updatedWork.Visibility == "private") {
+		uc.webhookRepo.WebhookNotify(ctx, updatedWork)
 	}
 
 	return updatedWork, nil
