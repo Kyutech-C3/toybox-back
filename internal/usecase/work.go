@@ -233,6 +233,10 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 	if err != nil {
 		return nil, fmt.Errorf("failed to create work: %w", err)
 	}
+	createdWork, err = uc.workRepo.GetByID(ctx, createdWork.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get created work by ID %s: %w", createdWork.ID.String(), err)
+	}
 	uc.webhookRepo.WebhookNotify(ctx, createdWork)
 	return createdWork, nil
 }

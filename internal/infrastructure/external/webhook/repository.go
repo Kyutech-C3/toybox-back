@@ -20,11 +20,11 @@ type DiscordWebhookData struct {
 }
 
 type DiscordWebhookEmbed struct {
-	Title       string                `json:"title"`
-	URL         string                `json:"url"`
-	Description string                `json:"description"`
-	Color       int                   `json:"color"`
-	Image       []DiscordWebhookImage `json:"image"`
+	Title       string              `json:"title"`
+	URL         string              `json:"url"`
+	Description string              `json:"description"`
+	Color       int                 `json:"color"`
+	Image       DiscordWebhookImage `json:"image"`
 }
 
 type DiscordWebhookImage struct {
@@ -47,7 +47,7 @@ func NewDiscordWebhookData(work *entity.Work) DiscordWebhookData {
 				URL:         config.FRONTEND_URL[0] + "/works/" + work.ID.String(),
 				Description: description,
 				Color:       4063189,
-				Image:       []DiscordWebhookImage{{URL: work.ThumbnailURL}},
+				Image:       DiscordWebhookImage{URL: work.ThumbnailURL},
 			},
 		},
 	}
@@ -65,6 +65,14 @@ func NewWebhookNotifierRepository() *WebhookNotifierRepository {
 
 func (r *WebhookNotifierRepository) WebhookNotify(ctx context.Context, work *entity.Work) {
 	discordWebhookData := NewDiscordWebhookData(work)
+	if work.User == nil {
+		log.Println("work user is nil")
+		return
+	}
+	if work.ThumbnailURL == "" {
+		log.Println("work thumbnail URL is empty")
+		return
+	}
 	jsonData, err := json.Marshal(discordWebhookData)
 	if err != nil {
 		log.Println("failed to marshal discord webhook data: %w", err)
@@ -87,11 +95,10 @@ func (r *WebhookNotifierRepository) WebhookNotify(ctx context.Context, work *ent
 		log.Println("failed to send webhook: %w", err)
 		return
 	}
+	log.Println(discordWebhookData)
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusNoContent {
 		log.Println("failed to send webhook: %w", err)
 		return
 	}
-
-	return
 }
