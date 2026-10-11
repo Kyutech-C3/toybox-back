@@ -237,7 +237,9 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 	if err != nil {
 		return nil, fmt.Errorf("failed to get created work by ID %s: %w", createdWork.ID.String(), err)
 	}
-	uc.webhookRepo.WebhookNotify(ctx, createdWork)
+	if createdWork.Visibility == "public" || createdWork.Visibility == "private" {
+		uc.webhookRepo.WebhookNotify(ctx, createdWork)
+	}
 	return createdWork, nil
 }
 
