@@ -42,11 +42,9 @@ func (m *MockWebhookNotifierRepository) EXPECT() *MockWebhookNotifierRepositoryM
 }
 
 // WebhookNotify mocks base method.
-func (m *MockWebhookNotifierRepository) WebhookNotify(ctx context.Context, work *entity.Work) error {
+func (m *MockWebhookNotifierRepository) WebhookNotify(ctx context.Context, work *entity.Work) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WebhookNotify", ctx, work)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "WebhookNotify", ctx, work)
 }
 
 // WebhookNotify indicates an expected call of WebhookNotify.

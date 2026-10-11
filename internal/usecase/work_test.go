@@ -830,12 +830,20 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			userID:           uuid.New(),
 			tagIDs:           []uuid.UUID{uuid.New(), uuid.New()},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
+				var created *entity.Work
 				m.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
 						work.CreatedAt = time.Now()
 						work.UpdatedAt = time.Now()
+						created = work
 						return work, nil
+					}).
+					Times(1)
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+						return created, nil
 					}).
 					Times(1)
 			},
@@ -861,11 +869,10 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
 				m.EXPECT().
 					WebhookNotify(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(ctx context.Context, work *entity.Work) error {
+					Do(func(ctx context.Context, work *entity.Work) {
 						assert.NotEqual(t, uuid.Nil, work.ID)
 						assert.Equal(t, "New Work", work.Title)
 						assert.Equal(t, "public", work.Visibility)
-						return nil
 					}).
 					Times(1)
 			},
@@ -1086,10 +1093,18 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			userID:           uuid.New(),
 			tagIDs:           []uuid.UUID{uuid.New()},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
+				var created *entity.Work
 				m.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+						created = work
 						return work, nil
+					}).
+					Times(1)
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+						return created, nil
 					}).
 					Times(1)
 			},
@@ -1127,10 +1142,18 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			userID:           uuid.New(),
 			tagIDs:           []uuid.UUID{uuid.New()},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
+				var created *entity.Work
 				m.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+						created = work
 						return work, nil
+					}).
+					Times(1)
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+						return created, nil
 					}).
 					Times(1)
 			},
@@ -1153,52 +1176,9 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
 				m.EXPECT().
 					WebhookNotify(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(ctx context.Context, work *entity.Work) error {
+					Do(func(ctx context.Context, work *entity.Work) {
 						assert.Equal(t, "private", work.Visibility)
-						return nil
 					}).
-					Times(1)
-			},
-			wantErr: false,
-		},
-		{
-			name:             "正常系: Webhook通知に失敗しても作品作成は成功する",
-			title:            "New Work",
-			description:      "New Description",
-			visibility:       "public",
-			thumbnailAssetID: uuid.New(),
-			assetIDs:         []uuid.UUID{uuid.New()},
-			urls:             []string{"https://example.com"},
-			userID:           uuid.New(),
-			tagIDs:           []uuid.UUID{uuid.New()},
-			setupWorkMock: func(m *mock.MockWorkRepository) {
-				m.EXPECT().
-					Create(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
-						return work, nil
-					}).
-					Times(1)
-			},
-			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {
-				m.EXPECT().
-					ExistAll(gomock.Any(), gomock.Eq(tagIDs)).
-					Return(true, nil).
-					Times(1)
-				m.EXPECT().
-					FindAllByIDs(gomock.Any(), gomock.Eq(tagIDs)).
-					Return([]*entity.Tag{{ID: tagIDs[0], Name: "Tag1"}}, nil).
-					Times(1)
-			},
-			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
-				m.EXPECT().
-					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
-					Return(true, nil).
-					Times(1)
-			},
-			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
-				m.EXPECT().
-					WebhookNotify(gomock.Any(), gomock.Any()).
-					Return(errors.New("webhook error")).
 					Times(1)
 			},
 			wantErr: false,
@@ -1325,6 +1305,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(initialWork, nil).Times(1)
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(updatedWork, nil).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
 			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
@@ -1339,6 +1320,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(initialWork, nil).Times(1)
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(updatedWork, nil).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
 			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {},
@@ -1394,6 +1376,7 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithAssets(), nil).Times(1)
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).Return(updatedWork, nil).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).Return(updatedWork, nil).Times(1)
 			},
 			setupTagMock: func(m *mock.MockTagRepository) {},
 			setupAssetMock: func(m *mock.MockAssetRepository, assetIDs *[]uuid.UUID, userID uuid.UUID) {
@@ -1449,8 +1432,13 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			title:  &updatedTitle,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(workWithOldUpdatedAt, nil).Times(1)
+				var saved *entity.Work
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, w *entity.Work) (*entity.Work, error) {
+					saved = w
 					return w, nil
+				}).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+					return saved, nil
 				}).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
@@ -1507,8 +1495,13 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			thumbnailAssetID: &newThumbnailID,
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithThumbnail(), nil).Times(1)
+				var saved *entity.Work
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, w *entity.Work) (*entity.Work, error) {
+					saved = w
 					return w, nil
+				}).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+					return saved, nil
 				}).Times(1)
 			},
 			setupTagMock: func(m *mock.MockTagRepository) {},
@@ -1536,8 +1529,13 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 			assetIDs:         &[]uuid.UUID{otherAssetID},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(newWorkWithThumbnail(), nil).Times(1)
+				var saved *entity.Work
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, w *entity.Work) (*entity.Work, error) {
+					saved = w
 					return w, nil
+				}).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+					return saved, nil
 				}).Times(1)
 			},
 			setupTagMock: func(m *mock.MockTagRepository) {},
@@ -1734,13 +1732,21 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 			name:            "正常系: 共同制作者を追加",
 			collaboratorIDs: []uuid.UUID{collaborator1ID, collaborator2ID},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
+				var created *entity.Work
 				m.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
 						assert.Equal(t, 2, len(work.Collaborators))
 						work.CreatedAt = time.Now()
 						work.UpdatedAt = time.Now()
+						created = work
 						return work, nil
+					}).
+					Times(1)
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+						return created, nil
 					}).
 					Times(1)
 			},
@@ -1792,13 +1798,21 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 			name:            "正常系: 共同制作者なし（空配列）",
 			collaboratorIDs: []uuid.UUID{},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
+				var created *entity.Work
 				m.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
 						assert.Equal(t, 0, len(work.Collaborators))
 						work.CreatedAt = time.Now()
 						work.UpdatedAt = time.Now()
+						created = work
 						return work, nil
+					}).
+					Times(1)
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+						return created, nil
 					}).
 					Times(1)
 			},
@@ -1834,7 +1848,7 @@ func TestWorkUseCase_CreateWork_WithCollaborators(t *testing.T) {
 			tt.setupTagMock(mockTagRepo)
 			tt.setupAssetMock(mockAssetRepo)
 			tt.setupUserMock(mockUserRepo)
-			mockWebhookRepo.EXPECT().WebhookNotify(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			mockWebhookRepo.EXPECT().WebhookNotify(gomock.Any(), gomock.Any()).AnyTimes()
 
 			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
 			got, err := uc.CreateWork(context.Background(), "Title", "Description", "public", thumbnailAssetID, []uuid.UUID{assetID}, []string{"https://example.com"}, userID, []uuid.UUID{tagID}, tt.collaboratorIDs)
@@ -1886,9 +1900,14 @@ func TestWorkUseCase_UpdateWork_WithCollaborators(t *testing.T) {
 			collaboratorIDs: &[]uuid.UUID{collaborator1ID, collaborator2ID},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(initialWork, nil).Times(1)
+				var saved *entity.Work
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
 					assert.Equal(t, 2, len(work.Collaborators))
+					saved = work
 					return work, nil
+				}).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+					return saved, nil
 				}).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
@@ -1926,8 +1945,13 @@ func TestWorkUseCase_UpdateWork_WithCollaborators(t *testing.T) {
 					UpdatedAt:     time.Now(),
 				}
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(workWithCollaborators, nil).Times(1)
+				var saved *entity.Work
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+					saved = work
 					return work, nil
+				}).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+					return saved, nil
 				}).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},
@@ -1940,9 +1964,14 @@ func TestWorkUseCase_UpdateWork_WithCollaborators(t *testing.T) {
 			collaboratorIDs: &[]uuid.UUID{},
 			setupWorkMock: func(m *mock.MockWorkRepository) {
 				m.EXPECT().GetByID(gomock.Any(), workID).Return(initialWork, nil).Times(1)
+				var saved *entity.Work
 				m.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
 					assert.Equal(t, 0, len(work.Collaborators))
+					saved = work
 					return work, nil
+				}).Times(1)
+				m.EXPECT().GetByID(gomock.Any(), workID).DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+					return saved, nil
 				}).Times(1)
 			},
 			setupTagMock:   func(m *mock.MockTagRepository) {},

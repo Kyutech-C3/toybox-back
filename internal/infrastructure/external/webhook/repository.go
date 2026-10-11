@@ -67,7 +67,6 @@ func NewWebhookNotifierRepository() *WebhookNotifierRepository {
 }
 
 func (r *WebhookNotifierRepository) WebhookNotify(ctx context.Context, work *entity.Work) {
-	discordWebhookData := NewDiscordWebhookData(work)
 	if work.User == nil {
 		log.Println("work user is nil")
 		return
@@ -76,6 +75,7 @@ func (r *WebhookNotifierRepository) WebhookNotify(ctx context.Context, work *ent
 		log.Println("work thumbnail URL is empty")
 		return
 	}
+	discordWebhookData := NewDiscordWebhookData(work)
 	jsonData, err := json.Marshal(discordWebhookData)
 	if err != nil {
 		log.Println("failed to marshal discord webhook data: %w", err)
