@@ -16,6 +16,7 @@ import (
 type DiscordWebhookData struct {
 	Username  string                `json:"username"`
 	AvatarURL string                `json:"avatar_url"`
+	Content   string                `json:"content"`
 	Embeds    []DiscordWebhookEmbed `json:"embeds"`
 }
 
@@ -38,13 +39,15 @@ func NewDiscordWebhookData(work *entity.Work) DiscordWebhookData {
 	} else {
 		description = work.Description
 	}
+	URLString := config.FRONTEND_URL[0] + "/works/" + work.ID.String()
 	return DiscordWebhookData{
 		Username:  work.User.Name,
 		AvatarURL: work.User.AvatarURL,
+		Content:   URLString,
 		Embeds: []DiscordWebhookEmbed{
 			{
 				Title:       work.Title,
-				URL:         config.FRONTEND_URL[0] + "/works/" + work.ID.String(),
+				URL:         URLString,
 				Description: description,
 				Color:       4063189,
 				Image:       DiscordWebhookImage{URL: work.ThumbnailURL},
