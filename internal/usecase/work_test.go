@@ -800,8 +800,19 @@ func TestWorkUseCase_GetByUserID(t *testing.T) {
 	}
 }
 
+// fillRefetchedWork は保存後の再取得を模して、saved に User と ThumbnailURL を埋めた内容を dst に書き込む。
+// 通知に再取得した作品が渡ることを確認するため、saved とは別のインスタンスを返す。
+func fillRefetchedWork(dst, saved *entity.Work) *entity.Work {
+	*dst = *saved
+	dst.User = &entity.User{ID: saved.UserID, Name: "owner"}
+	dst.ThumbnailURL = "https://example.com/thumbnail.png"
+	return dst
+}
+
 func TestWorkUseCase_CreateWork(t *testing.T) {
 	duplicatedAssetID := uuid.New()
+	publicRefetchedWork := &entity.Work{}
+	privateRefetchedWork := &entity.Work{}
 
 	tests := []struct {
 		name             string
@@ -843,7 +854,8 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 				m.EXPECT().
 					GetByID(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
-						return created, nil
+						assert.Equal(t, created.ID, id)
+						return fillRefetchedWork(publicRefetchedWork, created), nil
 					}).
 					Times(1)
 			},
@@ -868,7 +880,7 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			},
 			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
 				m.EXPECT().
-					WebhookNotify(gomock.Any(), gomock.Any()).
+					WebhookNotify(gomock.Any(), gomock.Eq(publicRefetchedWork)).
 					Do(func(ctx context.Context, work *entity.Work) {
 						assert.NotEqual(t, uuid.Nil, work.ID)
 						assert.Equal(t, "New Work", work.Title)
@@ -1153,7 +1165,8 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 				m.EXPECT().
 					GetByID(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
-						return created, nil
+						assert.Equal(t, created.ID, id)
+						return fillRefetchedWork(privateRefetchedWork, created), nil
 					}).
 					Times(1)
 			},
@@ -1175,13 +1188,58 @@ func TestWorkUseCase_CreateWork(t *testing.T) {
 			},
 			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
 				m.EXPECT().
-					WebhookNotify(gomock.Any(), gomock.Any()).
+					WebhookNotify(gomock.Any(), gomock.Eq(privateRefetchedWork)).
 					Do(func(ctx context.Context, work *entity.Work) {
 						assert.Equal(t, "private", work.Visibility)
 					}).
 					Times(1)
 			},
 			wantErr: false,
+		},
+		{
+			name:             "異常系: 作成後の再取得に失敗した場合は通知しない",
+			title:            "New Work",
+			description:      "New Description",
+			visibility:       "public",
+			thumbnailAssetID: uuid.New(),
+			assetIDs:         []uuid.UUID{uuid.New()},
+			urls:             []string{"https://example.com"},
+			userID:           uuid.New(),
+			tagIDs:           []uuid.UUID{uuid.New()},
+			setupWorkMock: func(m *mock.MockWorkRepository) {
+				m.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, work *entity.Work) (*entity.Work, error) {
+						return work, nil
+					}).
+					Times(1)
+				m.EXPECT().
+					GetByID(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("database error")).
+					Times(1)
+			},
+			setupTagMock: func(m *mock.MockTagRepository, tagIDs []uuid.UUID) {
+				m.EXPECT().
+					ExistAll(gomock.Any(), gomock.Eq(tagIDs)).
+					Return(true, nil).
+					Times(1)
+				m.EXPECT().
+					FindAllByIDs(gomock.Any(), gomock.Eq(tagIDs)).
+					Return([]*entity.Tag{{ID: tagIDs[0], Name: "Tag1"}}, nil).
+					Times(1)
+			},
+			setupAssetMock: func(m *mock.MockAssetRepository, thumbnailAssetID uuid.UUID, assetIDs []uuid.UUID, userID uuid.UUID) {
+				m.EXPECT().
+					ExistAllByUserID(gomock.Any(), gomock.Eq(append([]uuid.UUID{thumbnailAssetID}, assetIDs...)), gomock.Eq(userID)).
+					Return(true, nil).
+					Times(1)
+			},
+			setupWebhookMock: func(m *mock.MockWebhookNotifierRepository) {
+				m.EXPECT().
+					WebhookNotify(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantErr: true,
 		},
 	}
 
@@ -1589,6 +1647,133 @@ func TestWorkUseCase_UpdateWork(t *testing.T) {
 				if tt.assertResult != nil {
 					tt.assertResult(t, got)
 				}
+			}
+		})
+	}
+}
+
+func TestWorkUseCase_UpdateWork_Webhook(t *testing.T) {
+	workID := uuid.New()
+	userID := uuid.New()
+
+	tests := []struct {
+		name             string
+		beforeVisibility string
+		afterVisibility  string
+		updateErr        error
+		refetchErr       error
+		wantNotify       bool
+		wantErr          bool
+	}{
+		{
+			name:             "正常系: draftからpublicに更新すると通知する",
+			beforeVisibility: "draft",
+			afterVisibility:  "public",
+			wantNotify:       true,
+		},
+		{
+			name:             "正常系: draftからprivateに更新すると通知する",
+			beforeVisibility: "draft",
+			afterVisibility:  "private",
+			wantNotify:       true,
+		},
+		{
+			name:             "正常系: draftのまま更新しても通知しない",
+			beforeVisibility: "draft",
+			afterVisibility:  "draft",
+			wantNotify:       false,
+		},
+		{
+			name:             "正常系: publicからprivateに更新しても通知しない",
+			beforeVisibility: "public",
+			afterVisibility:  "private",
+			wantNotify:       false,
+		},
+		{
+			name:             "正常系: privateからpublicに更新しても通知しない",
+			beforeVisibility: "private",
+			afterVisibility:  "public",
+			wantNotify:       false,
+		},
+		{
+			name:             "正常系: publicからdraftに更新しても通知しない",
+			beforeVisibility: "public",
+			afterVisibility:  "draft",
+			wantNotify:       false,
+		},
+		{
+			name:             "異常系: draftからpublicでも更新に失敗した場合は通知しない",
+			beforeVisibility: "draft",
+			afterVisibility:  "public",
+			updateErr:        errors.New("db error"),
+			wantNotify:       false,
+			wantErr:          true,
+		},
+		{
+			name:             "異常系: draftからpublicでも更新後の再取得に失敗した場合は通知しない",
+			beforeVisibility: "draft",
+			afterVisibility:  "public",
+			refetchErr:       errors.New("db error"),
+			wantNotify:       false,
+			wantErr:          true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWorkRepo := mock.NewMockWorkRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockAssetRepo := mock.NewMockAssetRepository(ctrl)
+			mockUserRepo := mock.NewMockUserRepository(ctrl)
+			mockFavoriteRepo := mock.NewMockFavoriteRepository(ctrl)
+			mockWebhookRepo := mock.NewMockWebhookNotifierRepository(ctrl)
+
+			work := &entity.Work{
+				ID:               workID,
+				Title:            "Title",
+				Description:      "Description",
+				UserID:           userID,
+				Visibility:       tt.beforeVisibility,
+				ThumbnailAssetID: uuid.New(),
+			}
+			refetchedWork := &entity.Work{}
+
+			mockWorkRepo.EXPECT().GetByID(gomock.Any(), workID).Return(work, nil).Times(1)
+			if tt.updateErr != nil {
+				mockWorkRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil, tt.updateErr).Times(1)
+			} else {
+				var saved *entity.Work
+				mockWorkRepo.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, w *entity.Work) (*entity.Work, error) {
+					saved = w
+					return w, nil
+				}).Times(1)
+				if tt.refetchErr != nil {
+					mockWorkRepo.EXPECT().GetByID(gomock.Any(), workID).Return(nil, tt.refetchErr).Times(1)
+				} else {
+					mockWorkRepo.EXPECT().GetByID(gomock.Any(), workID).DoAndReturn(func(ctx context.Context, id uuid.UUID) (*entity.Work, error) {
+						return fillRefetchedWork(refetchedWork, saved), nil
+					}).Times(1)
+				}
+			}
+			if tt.wantNotify {
+				mockWebhookRepo.EXPECT().WebhookNotify(gomock.Any(), gomock.Eq(refetchedWork)).Times(1)
+			} else {
+				mockWebhookRepo.EXPECT().WebhookNotify(gomock.Any(), gomock.Any()).Times(0)
+			}
+
+			uc := usecase.NewWorkUseCase(mockWorkRepo, mockTagRepo, mockAssetRepo, mockUserRepo, mockFavoriteRepo, mockWebhookRepo)
+			got, err := uc.UpdateWork(context.Background(), workID, userID, nil, nil, &tt.afterVisibility, nil, nil, nil, nil, nil)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, got)
+				assert.Equal(t, tt.afterVisibility, got.Visibility)
 			}
 		})
 	}
