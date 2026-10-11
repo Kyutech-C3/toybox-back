@@ -27,15 +27,17 @@ type workUseCase struct {
 	assetRepo    repository.AssetRepository
 	userRepo     repository.UserRepository
 	favoriteRepo repository.FavoriteRepository
+	webhookRepo  repository.WebhookNotifierRepository
 }
 
-func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository) IWorkUseCase {
+func NewWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository, webhookRepo repository.WebhookNotifierRepository) IWorkUseCase {
 	return &workUseCase{
 		workRepo:     workRepo,
 		tagRepo:      tagRepo,
 		assetRepo:    assetRepo,
 		userRepo:     userRepo,
 		favoriteRepo: favoriteRepo,
+		webhookRepo:  webhookRepo,
 	}
 }
 
@@ -231,7 +233,14 @@ func (uc *workUseCase) CreateWork(ctx context.Context, title, description, visib
 	if err != nil {
 		return nil, fmt.Errorf("failed to create work: %w", err)
 	}
-	return createdWork, nil
+	refetchedWork, err := uc.workRepo.GetByID(ctx, createdWork.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get created work by ID %s: %w", createdWork.ID.String(), err)
+	}
+	if refetchedWork.Visibility == "public" || refetchedWork.Visibility == "private" {
+		uc.webhookRepo.WebhookNotify(ctx, refetchedWork)
+	}
+	return refetchedWork, nil
 }
 
 func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID uuid.UUID, title *string, description *string, visibility *string, thumbnailAssetID *uuid.UUID, assetIDs *[]uuid.UUID, urls *[]string, tagIDs *[]uuid.UUID, collaboratorIDs *[]uuid.UUID) (*entity.Work, error) {
@@ -243,6 +252,7 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 	if work.UserID != userID {
 		return nil, domainerrors.ErrWorkNotOwnedByUser
 	}
+	previousVisibility := work.Visibility
 
 	if title != nil {
 		work.Title = *title
@@ -362,7 +372,15 @@ func (uc *workUseCase) UpdateWork(ctx context.Context, workID uuid.UUID, userID 
 		}
 	}
 
-	return updatedWork, nil
+	refetchedWork, err := uc.workRepo.GetByID(ctx, updatedWork.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated work by ID %s: %w", updatedWork.ID.String(), err)
+	}
+	if previousVisibility == "draft" && (refetchedWork.Visibility == "public" || refetchedWork.Visibility == "private") {
+		uc.webhookRepo.WebhookNotify(ctx, refetchedWork)
+	}
+
+	return refetchedWork, nil
 }
 
 func (uc *workUseCase) DeleteWork(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
