@@ -23,6 +23,7 @@ import (
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/work"
 	customejwt "github.com/simesaba80/toybox-back/internal/infrastructure/external/custome-jwt"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/external/oauth"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/external/webhook"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/router"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
 	"github.com/simesaba80/toybox-back/internal/usecase"
@@ -47,6 +48,8 @@ var RepositorySet = wire.NewSet(
 	wire.Bind(new(repository.FavoriteRepository), new(*favorite.FavoriteRepository)),
 	tag.NewTagRepository,
 	wire.Bind(new(repository.TagRepository), new(*tag.TagRepository)),
+	webhook.NewWebhookNotifierRepository,
+	wire.Bind(new(repository.WebhookNotifierRepository), new(*webhook.WebhookNotifierRepository)),
 )
 
 var UseCaseSet = wire.NewSet(
@@ -103,8 +106,8 @@ func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します
-func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository) usecase.IWorkUseCase {
-	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo, userRepo, favoriteRepo)
+func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.TagRepository, assetRepo repository.AssetRepository, userRepo repository.UserRepository, favoriteRepo repository.FavoriteRepository, webhookRepo repository.WebhookNotifierRepository) usecase.IWorkUseCase {
+	return usecase.NewWorkUseCase(workRepo, tagRepo, assetRepo, userRepo, favoriteRepo, webhookRepo)
 }
 
 // ProvideCommentUseCase はCommentUseCaseを提供します

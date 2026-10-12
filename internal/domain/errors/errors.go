@@ -17,6 +17,12 @@ var (
 	ErrRedirectURLNotSet     = errors.New("redirect URL is not set")
 )
 
+// Webhook関連のエラー定義
+var (
+	ErrFailedToCreateRequest = errors.New("failed to create request")
+	ErrFailedToSendWebhook   = errors.New("failed to send webhook")
+)
+
 // DB関連のエラー定義
 var (
 	ErrFailedToBeginTransaction    = errors.New("failed to begin transaction")
