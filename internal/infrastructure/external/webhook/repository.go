@@ -41,7 +41,7 @@ func NewDiscordWebhookData(work *entity.Work) DiscordWebhookData {
 	}
 	URLString := config.FRONTEND_URL[0] + "/works/" + work.ID.String()
 	return DiscordWebhookData{
-		Username:  work.User.Name,
+		Username:  work.User.DisplayName,
 		AvatarURL: work.User.AvatarURL,
 		Content:   URLString,
 		Embeds: []DiscordWebhookEmbed{
