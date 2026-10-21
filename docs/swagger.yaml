@@ -254,20 +254,6 @@ definitions:
       name:
         type: string
     type: object
-  github_com_simesaba80_toybox-back_internal_interface_schema.UpdateUserInput:
-    properties:
-      display_name:
-        maxLength: 32
-        minLength: 1
-        type: string
-      github_id:
-        type: string
-      profile:
-        maxLength: 500
-        type: string
-      x_username:
-        type: string
-    type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.UpdateWorkInput:
     properties:
       asset_ids:
@@ -644,15 +630,30 @@ paths:
   /auth/users:
     patch:
       consumes:
-      - application/json
+      - multipart/form-data
       description: Partially update a user
       parameters:
-      - description: Fields to update
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UpdateUserInput'
+      - description: Display name (1-32 characters)
+        in: formData
+        name: display_name
+        type: string
+      - description: Profile (up to 500 characters)
+        in: formData
+        name: profile
+        type: string
+      - description: X username
+        in: formData
+        name: x_username
+        type: string
+      - description: GitHub ID
+        in: formData
+        name: github_id
+        type: string
+      - description: 'Avatar image. Allowed extensions: png, jpg, jpeg, gif, webp.
+          Request body must not exceed 5MiB.'
+        in: formData
+        name: avatar
+        type: file
       produces:
       - application/json
       responses:
@@ -666,6 +667,10 @@ paths:
             $ref: '#/definitions/echo.HTTPError'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/echo.HTTPError'
         "500":
