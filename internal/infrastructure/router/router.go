@@ -114,7 +114,7 @@ func (r *Router) Setup() *echo.Echo {
 	e.Use(echojwt.WithConfig(config))
 
 	// User
-	e.PATCH("/users", r.UserController.UpdateUser)
+	e.PATCH("/users", r.UserController.UpdateUser, middleware.BodyLimit("5MiB"))
 	e.GET("/users/me", r.UserController.GetCurrentUser)
 
 	// Work

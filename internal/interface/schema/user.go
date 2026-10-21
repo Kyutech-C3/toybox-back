@@ -30,10 +30,10 @@ type UserListResponse struct {
 }
 
 type UpdateUserInput struct {
-	DisplayName *string `json:"display_name,omitempty" validate:"omitempty,min=1,max=32"`
-	Profile     *string `json:"profile,omitempty" validate:"omitempty,max=500"`
-	XUsername   *string `json:"x_username,omitempty" validate:"omitempty"`
-	GithubID    *string `json:"github_id,omitempty" validate:"omitempty"`
+	DisplayName *string `form:"display_name" validate:"omitempty,min=1,max=32"`
+	Profile     *string `form:"profile" validate:"omitempty,max=500"`
+	XUsername   *string `form:"x_username" validate:"omitempty"`
+	GithubID    *string `form:"github_id" validate:"omitempty"`
 }
 
 func ToUserResponse(user *entity.User) GetUserOutput {

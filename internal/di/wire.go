@@ -101,8 +101,8 @@ func ProvideS3Client() *s3.Client {
 }
 
 // ProvideUserUseCase はUserUseCaseを提供します
-func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
-	return usecase.NewUserUseCase(repo)
+func ProvideUserUseCase(repo repository.UserRepository, assetRepo repository.AssetRepository) usecase.IUserUseCase {
+	return usecase.NewUserUseCase(repo, assetRepo)
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します

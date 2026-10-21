@@ -179,6 +179,29 @@ func (r *AssetRepository) UploadAvatar(ctx context.Context, discordUserID string
 	return &newAvatarURL, nil
 }
 
+func (r *AssetRepository) UploadAvatarFile(ctx context.Context, file *multipart.FileHeader, extension string) (avatarURL *string, err error) {
+	openFile, err := file.Open()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer openFile.Close()
+
+	s3Key := fmt.Sprintf("%s/avatar/%s.%s", config.S3_DIR, uuid.New().String(), extension)
+	_, err = r.s3.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(config.S3_BUCKET),
+		Key:           aws.String(s3Key),
+		Body:          openFile,
+		ContentType:   aws.String(string(defineMimeType(extension))),
+		ContentLength: aws.Int64(file.Size),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload avatar to s3: %w", err)
+	}
+
+	newAvatarURL := fmt.Sprintf("%s/%s/%s", config.S3_BASE_URL, config.S3_BUCKET, s3Key)
+	return &newAvatarURL, nil
+}
+
 func (r *AssetRepository) ExistAllByUserID(ctx context.Context, ids []uuid.UUID, userID uuid.UUID) (bool, error) {
 	if len(ids) == 0 {
 		return true, nil
