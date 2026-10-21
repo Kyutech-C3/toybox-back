@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
@@ -213,6 +215,43 @@ func TestUserController_GetCurrentUser(t *testing.T) {
 		})
 	}
 }
+
+type updateUserAvatar struct {
+	filename string
+	content  []byte
+}
+
+func newUpdateUserRequest(t *testing.T, fields map[string]string, avatar *updateUserAvatar) *http.Request {
+	t.Helper()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for key, value := range fields {
+		if err := writer.WriteField(key, value); err != nil {
+			t.Fatalf("failed to write field: %v", err)
+		}
+	}
+	if avatar != nil {
+		part, err := writer.CreateFormFile("avatar", avatar.filename)
+		if err != nil {
+			t.Fatalf("failed to create form file: %v", err)
+		}
+		if _, err := part.Write(avatar.content); err != nil {
+			t.Fatalf("failed to write file content: %v", err)
+		}
+	}
+
+	contentType := writer.FormDataContentType()
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/auth/user", body)
+	req.Header.Set(echo.HeaderContentType, contentType)
+	return req
+}
+
 func TestUserController_UpdateUser(t *testing.T) {
 	userID := uuid.New()
 	now := time.Now()
@@ -222,6 +261,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 		Email:       "updated@example.com",
 		DisplayName: "Updated User",
 		Profile:     "Updated profile",
+		AvatarURL:   "https://s3.example.com/bucket/dir/avatar/new.png",
 		XUsername:   "xuser123",
 		GithubID:    "github123",
 		CreatedAt:   now,
@@ -232,72 +272,142 @@ func TestUserController_UpdateUser(t *testing.T) {
 	updatedProfile := "Updated profile"
 	updatedXUsername := "xuser123"
 	updatedGithubID := "github123"
-	input := schema.UpdateUserInput{
-		DisplayName: &updatedDisplayName,
-		Profile:     &updatedProfile,
-		XUsername:   &updatedXUsername,
-		GithubID:    &updatedGithubID,
+	fullFields := map[string]string{
+		"display_name": updatedDisplayName,
+		"profile":      updatedProfile,
+		"x_username":   updatedXUsername,
+		"github_id":    updatedGithubID,
 	}
-	inputJSON, _ := json.Marshal(input)
+	avatar := &updateUserAvatar{filename: "avatar.png", content: []byte("dummy image content")}
 
 	successResponseBytes, _ := json.Marshal(schema.ToUserResponse(mockUser))
 	badRequestResponseBytes, _ := json.Marshal(map[string]string{"message": "無効なリクエストです"})
 	notFoundResponseBytes, _ := json.Marshal(map[string]string{"message": "ユーザーが見つかりませんでした"})
 	failedToUpdateResponseBytes, _ := json.Marshal(map[string]string{"message": "ユーザーの更新に失敗しました"})
+	unsupportedFileTypeResponseBytes, _ := json.Marshal(map[string]string{"message": "対応していないファイル形式です"})
+	failedToUploadResponseBytes, _ := json.Marshal(map[string]string{"message": "ファイルのアップロードに失敗しました"})
 	internalErrorResponseBytes, _ := json.Marshal(map[string]string{"message": "サーバーエラーが発生しました"})
 
 	partialDisplayName := "New Name Only"
-	partialBody, _ := json.Marshal(schema.UpdateUserInput{DisplayName: &partialDisplayName})
 
 	tests := []struct {
 		name       string
-		body       []byte
+		newRequest func(t *testing.T) *http.Request
 		setupMock  func(mockUserUsecase *mock.MockIUserUseCase)
 		wantStatus int
 		wantBody   []byte
 	}{
 		{
 			name: "正常系: ユーザー更新成功",
-			body: inputJSON,
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, fullFields, nil)
+			},
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID).
+					UpdateUser(gomock.Any(), userID, &updatedDisplayName, &updatedProfile, &updatedXUsername, &updatedGithubID, (*multipart.FileHeader)(nil)).
 					Return(mockUser, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
 		},
 		{
-			name:       "異常系: 不正なリクエストボディ",
-			body:       []byte("invalid json"),
-			setupMock:  func(mockUserUsecase *mock.MockIUserUseCase) {},
-			wantStatus: http.StatusBadRequest,
-			wantBody:   badRequestResponseBytes,
+			name: "正常系: アバターと他フィールドを同時に更新",
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, fullFields, avatar)
+			},
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					UpdateUser(gomock.Any(), userID, &updatedDisplayName, &updatedProfile, &updatedXUsername, &updatedGithubID, gomock.Any()).
+					DoAndReturn(func(ctx any, uid uuid.UUID, displayName, profile, xUsername, githubID *string, file *multipart.FileHeader) (*entity.User, error) {
+						assert.NotNil(t, file)
+						assert.Equal(t, avatar.filename, file.Filename)
+						assert.Equal(t, int64(len(avatar.content)), file.Size)
+						return mockUser, nil
+					})
+			},
+			wantStatus: http.StatusOK,
+			wantBody:   successResponseBytes,
 		},
 		{
-			name:       "異常系: display_nameが空文字（バリデーションエラー）",
-			body:       []byte(`{"display_name": ""}`),
-			setupMock:  func(mockUserUsecase *mock.MockIUserUseCase) {},
-			wantStatus: http.StatusBadRequest,
-			wantBody:   badRequestResponseBytes,
+			name: "正常系: アバターのみ更新（他フィールドは省略）",
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, nil, avatar)
+			},
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					UpdateUser(gomock.Any(), userID, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), gomock.Not(gomock.Nil())).
+					Return(mockUser, nil)
+			},
+			wantStatus: http.StatusOK,
+			wantBody:   successResponseBytes,
 		},
 		{
 			name: "正常系: display_nameのみ更新（部分更新、他フィールドは省略）",
-			body: partialBody,
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, map[string]string{"display_name": partialDisplayName}, nil)
+			},
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, &partialDisplayName, (*string)(nil), (*string)(nil), (*string)(nil)).
+					UpdateUser(gomock.Any(), userID, &partialDisplayName, (*string)(nil), (*string)(nil), (*string)(nil), (*multipart.FileHeader)(nil)).
 					Return(mockUser, nil)
 			},
 			wantStatus: http.StatusOK,
 			wantBody:   successResponseBytes,
 		},
 		{
-			name: "異常系: ユーザーが見つからない",
-			body: inputJSON,
+			name: "異常系: multipart/form-data以外のリクエスト",
+			newRequest: func(t *testing.T) *http.Request {
+				req := httptest.NewRequest(http.MethodPatch, "/auth/user", bytes.NewReader([]byte(`{"display_name": "json"}`)))
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+				return req
+			},
+			setupMock:  func(mockUserUsecase *mock.MockIUserUseCase) {},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   badRequestResponseBytes,
+		},
+		{
+			name: "異常系: display_nameが空文字（バリデーションエラー）",
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, map[string]string{"display_name": ""}, nil)
+			},
+			setupMock:  func(mockUserUsecase *mock.MockIUserUseCase) {},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   badRequestResponseBytes,
+		},
+		{
+			name: "異常系: 対応していないアバターの形式",
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, nil, &updateUserAvatar{filename: "avatar.mp4", content: []byte("dummy")})
+			},
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID).
+					UpdateUser(gomock.Any(), userID, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), gomock.Any()).
+					Return(nil, domainerrors.ErrUnsupportedFileType)
+			},
+			wantStatus: http.StatusBadRequest,
+			wantBody:   unsupportedFileTypeResponseBytes,
+		},
+		{
+			name: "異常系: アバターのアップロード失敗",
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, nil, avatar)
+			},
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					UpdateUser(gomock.Any(), userID, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), gomock.Any()).
+					Return(nil, domainerrors.ErrFailedToUploadFile)
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantBody:   failedToUploadResponseBytes,
+		},
+		{
+			name: "異常系: ユーザーが見つからない",
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, fullFields, nil)
+			},
+			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
+				mockUserUsecase.EXPECT().
+					UpdateUser(gomock.Any(), userID, &updatedDisplayName, &updatedProfile, &updatedXUsername, &updatedGithubID, (*multipart.FileHeader)(nil)).
 					Return(nil, domainerrors.ErrUserNotFound)
 			},
 			wantStatus: http.StatusNotFound,
@@ -305,10 +415,12 @@ func TestUserController_UpdateUser(t *testing.T) {
 		},
 		{
 			name: "異常系: ユーザー更新失敗",
-			body: inputJSON,
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, fullFields, nil)
+			},
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID).
+					UpdateUser(gomock.Any(), userID, &updatedDisplayName, &updatedProfile, &updatedXUsername, &updatedGithubID, (*multipart.FileHeader)(nil)).
 					Return(nil, domainerrors.ErrFailedToUpdateUser)
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -316,10 +428,12 @@ func TestUserController_UpdateUser(t *testing.T) {
 		},
 		{
 			name: "異常系: 予期しないエラー",
-			body: inputJSON,
+			newRequest: func(t *testing.T) *http.Request {
+				return newUpdateUserRequest(t, fullFields, nil)
+			},
 			setupMock: func(mockUserUsecase *mock.MockIUserUseCase) {
 				mockUserUsecase.EXPECT().
-					UpdateUser(gomock.Any(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID).
+					UpdateUser(gomock.Any(), userID, &updatedDisplayName, &updatedProfile, &updatedXUsername, &updatedGithubID, (*multipart.FileHeader)(nil)).
 					Return(nil, errors.New("unexpected error"))
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -347,8 +461,7 @@ func TestUserController_UpdateUser(t *testing.T) {
 				return userController.UpdateUser(c)
 			})
 
-			req := httptest.NewRequest(http.MethodPatch, "/auth/user", bytes.NewReader(tt.body))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			req := tt.newRequest(t)
 			rec := httptest.NewRecorder()
 
 			e.ServeHTTP(rec, req)
@@ -357,4 +470,35 @@ func TestUserController_UpdateUser(t *testing.T) {
 			assert.JSONEq(t, string(tt.wantBody), rec.Body.String())
 		})
 	}
+}
+
+func TestUserController_UpdateUser_BodyLimitWithoutContentLength(t *testing.T) {
+	e := echo.New()
+	e.Validator = echovalidator.NewValidator()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockUsecase := mock.NewMockIUserUseCase(ctrl)
+	mockUsecase.EXPECT().
+		UpdateUser(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Times(0)
+
+	userController := controller.NewUserController(mockUsecase)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &schema.JWTCustomClaims{
+		UserID: uuid.NewString(),
+	})
+
+	e.PATCH("/auth/user", func(c echo.Context) error {
+		c.Set("user", token)
+		return userController.UpdateUser(c)
+	}, middleware.BodyLimit("1KiB"))
+
+	req := newUpdateUserRequest(t, nil, &updateUserAvatar{filename: "avatar.png", content: bytes.Repeat([]byte("a"), 8*1024)})
+	req.ContentLength = -1
+	rec := httptest.NewRecorder()
+
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+	assert.JSONEq(t, `{"message":"Request Entity Too Large"}`, rec.Body.String())
 }

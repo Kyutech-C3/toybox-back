@@ -455,7 +455,7 @@ const docTemplate = `{
                 ],
                 "description": "Partially update a user",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -466,13 +466,34 @@ const docTemplate = `{
                 "summary": "Update a user",
                 "parameters": [
                     {
-                        "description": "Fields to update",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.UpdateUserInput"
-                        }
+                        "type": "string",
+                        "description": "Display name (1-32 characters)",
+                        "name": "display_name",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Profile (up to 500 characters)",
+                        "name": "profile",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "X username",
+                        "name": "x_username",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "GitHub ID",
+                        "name": "github_id",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Avatar image. Allowed extensions: png, jpg, jpeg, gif, webp. Request body must not exceed 5MiB.",
+                        "name": "avatar",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
@@ -490,6 +511,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/echo.HTTPError"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/echo.HTTPError"
                         }
@@ -1751,26 +1778,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_simesaba80_toybox-back_internal_interface_schema.UpdateUserInput": {
-            "type": "object",
-            "properties": {
-                "display_name": {
-                    "type": "string",
-                    "maxLength": 32,
-                    "minLength": 1
-                },
-                "github_id": {
-                    "type": "string"
-                },
-                "profile": {
-                    "type": "string",
-                    "maxLength": 500
-                },
-                "x_username": {
                     "type": "string"
                 }
             }

@@ -38,12 +38,12 @@ func InitializeApp() (*App, func(), error) {
 	echo := ProvideEcho()
 	db := ProvideDatabase()
 	userRepository := user.NewUserRepository(db)
-	iUserUseCase := ProvideUserUseCase(userRepository)
+	client := ProvideS3Client()
+	assetRepository := asset.NewAssetRepository(db, client)
+	iUserUseCase := ProvideUserUseCase(userRepository, assetRepository)
 	userController := controller.NewUserController(iUserUseCase)
 	workRepository := work.NewWorkRepository(db)
 	tagRepository := tag.NewTagRepository(db)
-	client := ProvideS3Client()
-	assetRepository := asset.NewAssetRepository(db, client)
 	favoriteRepository := favorite.NewFavoriteRepository(db)
 	webhookNotifierRepository := webhook.NewWebhookNotifierRepository()
 	iWorkUseCase := ProvideWorkUseCase(workRepository, tagRepository, assetRepository, userRepository, favoriteRepository, webhookNotifierRepository)
@@ -111,8 +111,8 @@ func ProvideS3Client() *s3.Client {
 }
 
 // ProvideUserUseCase はUserUseCaseを提供します
-func ProvideUserUseCase(repo repository.UserRepository) usecase.IUserUseCase {
-	return usecase.NewUserUseCase(repo)
+func ProvideUserUseCase(repo repository.UserRepository, assetRepo repository.AssetRepository) usecase.IUserUseCase {
+	return usecase.NewUserUseCase(repo, assetRepo)
 }
 
 // ProvideWorkUseCase はWorkUseCaseを提供します

@@ -99,12 +99,17 @@ func (uc *UserController) GetCurrentUser(c echo.Context) error {
 // @Summary Update a user
 // @Description Partially update a user
 // @Tags users
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
-// @Param user body schema.UpdateUserInput true "Fields to update"
+// @Param display_name formData string false "Display name (1-32 characters)"
+// @Param profile formData string false "Profile (up to 500 characters)"
+// @Param x_username formData string false "X username"
+// @Param github_id formData string false "GitHub ID"
+// @Param avatar formData file false "Avatar image. Allowed extensions: png, jpg, jpeg, gif, webp. Request body must not exceed 5MiB."
 // @Success 200 {object} schema.GetUserOutput
 // @Failure 400 {object} echo.HTTPError
 // @Failure 404 {object} echo.HTTPError
+// @Failure 413 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /auth/users [patch]
 // @Security BearerAuth
@@ -118,13 +123,28 @@ func (uc *UserController) UpdateUser(c echo.Context) error {
 
 	var input schema.UpdateUserInput
 	if err := c.Bind(&input); err != nil {
+		if errors.Is(err, echo.ErrStatusRequestEntityTooLarge) {
+			return echo.ErrStatusRequestEntityTooLarge
+		}
 		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
 	}
 	if err := c.Validate(&input); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
 	}
 
-	newUser, err := uc.userusecase.UpdateUser(c.Request().Context(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID)
+	avatar, err := c.FormFile("avatar")
+	if err != nil {
+		switch {
+		case errors.Is(err, echo.ErrStatusRequestEntityTooLarge):
+			return echo.ErrStatusRequestEntityTooLarge
+		case errors.Is(err, http.ErrMissingFile):
+			avatar = nil
+		default:
+			return echo.NewHTTPError(http.StatusBadRequest, "無効なリクエストです")
+		}
+	}
+
+	newUser, err := uc.userusecase.UpdateUser(c.Request().Context(), userID, input.DisplayName, input.Profile, input.XUsername, input.GithubID, avatar)
 	if err != nil {
 		c.Logger().Error("Failed to update user:", err)
 		return handleUserError(err)
@@ -138,6 +158,12 @@ func handleUserError(err error) error {
 		return echo.NewHTTPError(http.StatusNotFound, "ユーザーが見つかりませんでした")
 	case errors.Is(err, domainerrors.ErrFailedToUpdateUser):
 		return echo.NewHTTPError(http.StatusInternalServerError, "ユーザーの更新に失敗しました")
+	case errors.Is(err, domainerrors.ErrInvalidFileName):
+		return echo.NewHTTPError(http.StatusBadRequest, "ファイル名が無効です")
+	case errors.Is(err, domainerrors.ErrUnsupportedFileType):
+		return echo.NewHTTPError(http.StatusBadRequest, "対応していないファイル形式です")
+	case errors.Is(err, domainerrors.ErrFailedToUploadFile):
+		return echo.NewHTTPError(http.StatusInternalServerError, "ファイルのアップロードに失敗しました")
 	}
 	return echo.NewHTTPError(http.StatusInternalServerError, "サーバーエラーが発生しました")
 }
