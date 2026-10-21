@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -59,6 +60,7 @@ var extensionToMIME = map[string]mimeType{
 }
 
 const discordAvatarEndpointFormat = "https://cdn.discordapp.com/avatars/%s/%s.webp?size=256"
+const discordDefaultAvatarEndpointFormat = "https://cdn.discordapp.com/embed/avatars/%d.png"
 
 var ExtensionToDirName = map[string]string{
 	"png":  "image",
@@ -138,11 +140,22 @@ func defineMimeType(extension string) mimeType {
 }
 
 func (r *AssetRepository) UploadAvatar(ctx context.Context, discordUserID string, avatarHash string) (avatarURL *string, err error) {
-	if discordUserID == "" || avatarHash == "" {
-		return nil, fmt.Errorf("discord user id or avatar hash is empty")
+	if discordUserID == "" {
+		return nil, fmt.Errorf("discord user id is empty")
 	}
-
-	discordAvatarURL := fmt.Sprintf(discordAvatarEndpointFormat, discordUserID, avatarHash)
+	discordAvatarURL := ""
+	if avatarHash == "" {
+		// デフォルトアバターの場合UserIDをもとに0~5でインデックスを決定して取得
+		// https://docs.discord.com/developers/change-log#default-avatars
+		discordUserIDNum, err := strconv.Atoi(discordUserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert discord user id to int: %w", err)
+		}
+		idx := (discordUserIDNum >> 22) % 6
+		discordAvatarURL = fmt.Sprintf(discordDefaultAvatarEndpointFormat, idx)
+	} else {
+		discordAvatarURL = fmt.Sprintf(discordAvatarEndpointFormat, discordUserID, avatarHash)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discordAvatarURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discord avatar request: %w", err)
