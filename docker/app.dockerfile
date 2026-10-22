@@ -1,7 +1,7 @@
 ####################### Build stage #######################
 # golang:<version>-alpine は、Alpine Linux プロジェクトをベースにしている。
 # イメージサイズを最小にするため、git、gcc、bash などは、Alpine-based のイメージには含まれていない。
-FROM golang:1.24.6-alpine3.22 AS builder
+FROM golang:1.27.3-alpine3.24 AS builder
 # 作業ディレクトリの定義をする。今回は、app ディレクトリとした。
 WORKDIR /app
 # go.mod と go.sum を app ディレクトリにコピー

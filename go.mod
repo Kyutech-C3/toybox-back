@@ -1,6 +1,6 @@
 module github.com/simesaba80/toybox-back
 
-go 1.24.6
+go 1.27.3
 
 require (
 	github.com/go-playground/validator/v10 v10.27.0

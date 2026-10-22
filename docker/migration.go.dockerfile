@@ -1,4 +1,4 @@
-FROM golang:1.24.6-alpine3.22
+FROM golang:1.27.3-alpine3.24
 WORKDIR /app
 RUN apk --update add tzdata && \
     cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
