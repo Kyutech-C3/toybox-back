@@ -3,11 +3,11 @@ package router
 import (
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/config"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/external/jwks"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/external/proxy"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
 	"github.com/simesaba80/toybox-back/internal/interface/schema"
@@ -15,27 +15,30 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
+// Authenticator が発行するJWTを格納するCookie名
+const authCookieName = "toybox_token"
+
 type Router struct {
 	echo               *echo.Echo
 	UserController     *controller.UserController
 	WorkController     *controller.WorkController
 	CommentController  *controller.CommentController
-	AuthController     *controller.AuthController
 	AssetController    *controller.AssetController
 	FavoriteController *controller.FavoriteController
 	TagController      *controller.TagController
+	KeySet             *jwks.KeySet
 }
 
-func NewRouter(e *echo.Echo, uc *controller.UserController, wc *controller.WorkController, cc *controller.CommentController, authc *controller.AuthController, assetc *controller.AssetController, fc *controller.FavoriteController, tagc *controller.TagController) *Router {
+func NewRouter(e *echo.Echo, uc *controller.UserController, wc *controller.WorkController, cc *controller.CommentController, assetc *controller.AssetController, fc *controller.FavoriteController, tagc *controller.TagController, keySet *jwks.KeySet) *Router {
 	return &Router{
 		echo:               e,
 		UserController:     uc,
 		WorkController:     wc,
 		CommentController:  cc,
-		AuthController:     authc,
 		AssetController:    assetc,
 		FavoriteController: fc,
 		TagController:      tagc,
+		KeySet:             keySet,
 	}
 }
 
@@ -67,28 +70,20 @@ func (r *Router) Setup() *echo.Echo {
 	r.echo.GET("/api/v1/blogs", legacyProxyController.GetBlogs)
 	r.echo.GET("/api/v1/blogs/:blog_id", legacyProxyController.GetBlog)
 
-	// Auth
-	r.echo.GET("/auth/discord", r.AuthController.GetDiscordAuthURL)
-	r.echo.GET("/auth/discord/callback", r.AuthController.AuthenticateUser)
-	r.echo.POST("/auth/refresh", r.AuthController.RegenerateToken)
-	r.echo.POST("/auth/logout", r.AuthController.Logout)
-
 	// User
 	r.echo.GET("/users", r.UserController.GetAllUsers)
 	r.echo.GET("/users/:id", r.UserController.GetUserByID)
 
 	// Work
 	optionalConfig := echojwt.Config{
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return new(schema.JWTCustomClaims)
-		},
-		SigningKey: []byte(config.TOKEN_SECRET),
+		ParseTokenFunc: r.parseToken,
+		TokenLookup:    "cookie:" + authCookieName,
 		Skipper: func(c echo.Context) bool {
-			authHeader := c.Request().Header.Get("Authorization")
-			return authHeader == ""
+			_, err := c.Cookie(authCookieName)
+			return err != nil
 		},
 	}
-	o := r.echo.Group("/works", echojwt.WithConfig(optionalConfig))
+	o := r.echo.Group("/works", echojwt.WithConfig(optionalConfig), r.UserController.ResolveCurrentUser)
 
 	o.GET("", r.WorkController.GetAllWorks)
 	o.GET("/users/:user_id", r.WorkController.GetWorksByUserID)
@@ -102,18 +97,16 @@ func (r *Router) Setup() *echo.Echo {
 	r.echo.GET("/works/:work_id/favorite", r.FavoriteController.CountFavoritesByWorkID)
 
 	// Tag (認証任意 - 一覧取得)
-	r.echo.GET("/tags", r.TagController.GetAllTags, echojwt.WithConfig(optionalConfig))
+	r.echo.GET("/tags", r.TagController.GetAllTags, echojwt.WithConfig(optionalConfig), r.UserController.ResolveCurrentUser)
 
 	config := echojwt.Config{
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return new(schema.JWTCustomClaims)
-		},
-		SigningKey: []byte(config.TOKEN_SECRET),
+		ParseTokenFunc: r.parseToken,
+		TokenLookup:    "cookie:" + authCookieName,
 	}
-	e := r.echo.Group("/auth", echojwt.WithConfig(config))
-	e.Use(echojwt.WithConfig(config))
+	e := r.echo.Group("/auth", echojwt.WithConfig(config), r.UserController.ResolveCurrentUser)
 
 	// User
+	e.PUT("/users/me", r.UserController.RegisterCurrentUser)
 	e.PATCH("/users", r.UserController.UpdateUser, middleware.BodyLimit("5MiB"))
 	e.GET("/users/me", r.UserController.GetCurrentUser)
 
@@ -134,4 +127,8 @@ func (r *Router) Setup() *echo.Echo {
 	e.POST("/tags", r.TagController.CreateTag)
 
 	return r.echo
+}
+
+func (r *Router) parseToken(c echo.Context, auth string) (interface{}, error) {
+	return r.KeySet.Parse(auth, new(schema.JWTCustomClaims))
 }

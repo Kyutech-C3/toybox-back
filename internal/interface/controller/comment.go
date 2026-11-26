@@ -34,7 +34,7 @@ func NewCommentController(commentUsecase usecase.ICommentUsecase) *CommentContro
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /works/{work_id}/comments [get]
-// @Security BearerAuth
+// @Security CookieAuth
 func (cc *CommentController) GetCommentsByWorkID(c echo.Context) error {
 	workIDStr := c.Param("work_id")
 	workID, err := uuid.Parse(workIDStr)
@@ -78,7 +78,7 @@ func (cc *CommentController) GetCommentsByWorkID(c echo.Context) error {
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /works/{work_id}/comments [post]
-// @Security BearerAuth
+// @Security CookieAuth
 func (cc *CommentController) CreateComment(c echo.Context) error {
 	workIDStr := c.Param("work_id")
 	workID, err := uuid.Parse(workIDStr)

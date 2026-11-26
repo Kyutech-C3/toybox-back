@@ -38,7 +38,7 @@ func NewWorkController(workUsecase usecase.IWorkUseCase) *WorkController {
 // @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /works [get]
-// @Security BearerAuth
+// @Security CookieAuth
 func (wc *WorkController) GetAllWorks(c echo.Context) error {
 	rawUser := c.Get("user")
 	var userID uuid.UUID
@@ -111,7 +111,7 @@ func (wc *WorkController) GetAllWorks(c echo.Context) error {
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /works/{work_id} [get]
-// @Security BearerAuth
+// @Security CookieAuth
 func (wc *WorkController) GetWorkByID(c echo.Context) error {
 	idStr := c.Param("work_id")
 	id, err := uuid.Parse(idStr)
@@ -155,7 +155,7 @@ func (wc *WorkController) GetWorkByID(c echo.Context) error {
 // @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /works/users/{user_id} [get]
-// @Security BearerAuth
+// @Security CookieAuth
 func (wc *WorkController) GetWorksByUserID(c echo.Context) error {
 	rawUser := c.Get("user")
 	var authenticatedUserID uuid.UUID
@@ -215,7 +215,7 @@ func (wc *WorkController) GetWorksByUserID(c echo.Context) error {
 // @Success 201 {object} schema.CreateWorkOutput
 // @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Security BearerAuth
+// @Security CookieAuth
 // @Router /auth/works [post]
 func (wc *WorkController) CreateWork(c echo.Context) error {
 	var input schema.CreateWorkInput
@@ -266,7 +266,7 @@ func (wc *WorkController) CreateWork(c echo.Context) error {
 // @Failure 403 {object} echo.HTTPError
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Security BearerAuth
+// @Security CookieAuth
 // @Router /auth/works/{work_id} [patch]
 func (wc *WorkController) UpdateWork(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
@@ -308,7 +308,7 @@ func (wc *WorkController) UpdateWork(c echo.Context) error {
 // @Failure 403 {object} echo.HTTPError
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Security BearerAuth
+// @Security CookieAuth
 // @Router /auth/works/{work_id} [delete]
 func (wc *WorkController) DeleteWork(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)

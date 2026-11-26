@@ -33,7 +33,7 @@ func NewAssetController(assetUsecase usecase.IAssetUseCase) *AssetController {
 // @Failure 400 {object} echo.HTTPError
 // @Failure 413 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Security BearerAuth
+// @Security CookieAuth
 // @Router /auth/works/asset [post]
 func (ac *AssetController) UploadAsset(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
