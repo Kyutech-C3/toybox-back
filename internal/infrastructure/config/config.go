@@ -21,6 +21,7 @@ var (
 	TOKEN_SECRET             string
 	DISCORD_GUILD_IDS        []string
 	REDIRECT_URL             string
+	AUTHENTICATOR_URL        string
 	S3_BUCKET                string
 	S3_DIR                   string
 	S3_BASE_URL              string
@@ -50,6 +51,7 @@ func LoadEnv() {
 	TOKEN_SECRET = os.Getenv("TOKEN_SECRET")
 	DISCORD_GUILD_IDS = strings.Split(os.Getenv("DISCORD_GUILD_IDS"), ",")
 	REDIRECT_URL = os.Getenv("REDIRECT_URL")
+	AUTHENTICATOR_URL = os.Getenv("AUTHENTICATOR_URL")
 	S3_BUCKET = os.Getenv("S3_BUCKET")
 	S3_DIR = os.Getenv("S3_DIR")
 	S3_BASE_URL = os.Getenv("S3_BASE_URL")
