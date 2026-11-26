@@ -18,6 +18,7 @@ services:
       - 10.0.2.20
     networks:
       - app-network
+      - auth-network
     env_file:
       - .env
 
@@ -75,3 +76,5 @@ networks:
     ipam:
       config:
         - subnet: 10.0.2.0/24
+  auth-network:
+    external: true
