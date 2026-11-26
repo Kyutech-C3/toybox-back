@@ -16,9 +16,11 @@ services:
       - .:/app
     dns:
       - 10.0.2.20
+    # Linux の Docker でもホストの公開ポート(例: ローカルの authenticator)に到達できるようにする
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - app-network
-      - auth-network
     env_file:
       - .env
 
@@ -76,5 +78,3 @@ networks:
     ipam:
       config:
         - subnet: 10.0.2.0/24
-  auth-network:
-    external: true
