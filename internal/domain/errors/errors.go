@@ -7,6 +7,13 @@ var (
 	ErrInvalidRequestBody = errors.New("invalid request body")
 )
 
+// 認証関連のエラー定義
+var (
+	ErrPublicKeyNotFetched    = errors.New("public key is not fetched")
+	ErrFailedToFetchPublicKey = errors.New("failed to fetch public key")
+	ErrInvalidPublicKey       = errors.New("invalid public key")
+)
+
 // Webhook関連のエラー定義
 var (
 	ErrFailedToCreateRequest = errors.New("failed to create request")

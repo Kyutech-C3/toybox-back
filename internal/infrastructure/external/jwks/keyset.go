@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/config"
 )
 
@@ -42,7 +43,7 @@ func (ks *KeySet) Parse(tokenString string, claims jwt.Claims) (*jwt.Token, erro
 		return token, err
 	}
 	if fetchErr := ks.fetch(); fetchErr != nil {
-		return nil, errors.Join(err, fetchErr)
+		return nil, fmt.Errorf("%w: %w", err, fetchErr)
 	}
 	return ks.parse(tokenString, claims)
 }
@@ -52,7 +53,7 @@ func (ks *KeySet) parse(tokenString string, claims jwt.Claims) (*jwt.Token, erro
 		ks.mu.RLock()
 		defer ks.mu.RUnlock()
 		if ks.key == nil {
-			return nil, errors.New("公開鍵が未取得です")
+			return nil, domainerrors.ErrPublicKeyNotFetched
 		}
 		return ks.key, nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
@@ -61,11 +62,11 @@ func (ks *KeySet) parse(tokenString string, claims jwt.Claims) (*jwt.Token, erro
 func (ks *KeySet) fetch() error {
 	res, err := ks.client.Get(ks.url)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", domainerrors.ErrFailedToFetchPublicKey, err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("jwks %s: %d", ks.url, res.StatusCode)
+		return fmt.Errorf("%w: status %d", domainerrors.ErrFailedToFetchPublicKey, res.StatusCode)
 	}
 
 	var body struct {
@@ -76,14 +77,14 @@ func (ks *KeySet) fetch() error {
 		} `json:"keys"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", domainerrors.ErrInvalidPublicKey, err)
 	}
 	if len(body.Keys) == 0 || body.Keys[0].Kty != "OKP" || body.Keys[0].Crv != "Ed25519" {
-		return errors.New("Ed25519 の公開鍵がありません")
+		return domainerrors.ErrInvalidPublicKey
 	}
 	key, err := base64.RawURLEncoding.DecodeString(body.Keys[0].X)
 	if err != nil || len(key) != ed25519.PublicKeySize {
-		return errors.New("公開鍵の形式が不正です")
+		return domainerrors.ErrInvalidPublicKey
 	}
 
 	ks.mu.Lock()
