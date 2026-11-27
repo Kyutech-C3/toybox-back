@@ -8,7 +8,6 @@ package di
 
 import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/google/uuid"
 	"github.com/google/wire"
 	"github.com/labstack/echo/v4"
 	"github.com/simesaba80/toybox-back/internal/domain/repository"
@@ -16,11 +15,9 @@ import (
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/comment"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/favorite"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/tag"
-	"github.com/simesaba80/toybox-back/internal/infrastructure/database/token"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/user"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/work"
-	"github.com/simesaba80/toybox-back/internal/infrastructure/external/custome-jwt"
-	"github.com/simesaba80/toybox-back/internal/infrastructure/external/oauth"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/external/jwks"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/external/webhook"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/router"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
@@ -51,18 +48,14 @@ func InitializeApp() (*App, func(), error) {
 	commentRepository := comment.NewCommentRepository(db)
 	iCommentUsecase := ProvideCommentUseCase(commentRepository, workRepository)
 	commentController := controller.NewCommentController(iCommentUsecase)
-	discordRepository := oauth.NewDiscordRepository()
-	tokenProvider := ProvideTokenProvider()
-	tokenRepository := token.NewTokenRepository(db)
-	iAuthUsecase := ProvideAuthUseCase(discordRepository, userRepository, tokenProvider, tokenRepository, assetRepository)
-	authController := controller.NewAuthController(iAuthUsecase)
 	iAssetUseCase := ProvideAssetUseCase(assetRepository)
 	assetController := controller.NewAssetController(iAssetUseCase)
 	iFavoriteUsecase := ProvideFavoriteUseCase(favoriteRepository, workRepository)
 	favoriteController := controller.NewFavoriteController(iFavoriteUsecase)
 	iTagUseCase := ProvideTagUseCase(tagRepository)
 	tagController := controller.NewTagController(iTagUseCase)
-	routerRouter := router.NewRouter(echo, userController, workController, commentController, authController, assetController, favoriteController, tagController)
+	keySet := jwks.NewKeySet()
+	routerRouter := router.NewRouter(echo, userController, workController, commentController, assetController, favoriteController, tagController, keySet)
 	app := NewApp(routerRouter, db, client)
 	return app, func() {
 	}, nil
@@ -70,24 +63,22 @@ func InitializeApp() (*App, func(), error) {
 
 // wire.go:
 
-var RepositorySet = wire.NewSet(user.NewUserRepository, wire.Bind(new(repository.UserRepository), new(*user.UserRepository)), work.NewWorkRepository, wire.Bind(new(repository.WorkRepository), new(*work.WorkRepository)), comment.NewCommentRepository, wire.Bind(new(repository.CommentRepository), new(*comment.CommentRepository)), oauth.NewDiscordRepository, wire.Bind(new(repository.DiscordRepository), new(*oauth.DiscordRepository)), token.NewTokenRepository, wire.Bind(new(repository.TokenRepository), new(*token.TokenRepository)), asset.NewAssetRepository, wire.Bind(new(repository.AssetRepository), new(*asset.AssetRepository)), favorite.NewFavoriteRepository, wire.Bind(new(repository.FavoriteRepository), new(*favorite.FavoriteRepository)), tag.NewTagRepository, wire.Bind(new(repository.TagRepository), new(*tag.TagRepository)), webhook.NewWebhookNotifierRepository, wire.Bind(new(repository.WebhookNotifierRepository), new(*webhook.WebhookNotifierRepository)))
+var RepositorySet = wire.NewSet(user.NewUserRepository, wire.Bind(new(repository.UserRepository), new(*user.UserRepository)), work.NewWorkRepository, wire.Bind(new(repository.WorkRepository), new(*work.WorkRepository)), comment.NewCommentRepository, wire.Bind(new(repository.CommentRepository), new(*comment.CommentRepository)), asset.NewAssetRepository, wire.Bind(new(repository.AssetRepository), new(*asset.AssetRepository)), favorite.NewFavoriteRepository, wire.Bind(new(repository.FavoriteRepository), new(*favorite.FavoriteRepository)), tag.NewTagRepository, wire.Bind(new(repository.TagRepository), new(*tag.TagRepository)), webhook.NewWebhookNotifierRepository, wire.Bind(new(repository.WebhookNotifierRepository), new(*webhook.WebhookNotifierRepository)))
 
 var UseCaseSet = wire.NewSet(
 	ProvideUserUseCase,
 	ProvideWorkUseCase,
 	ProvideCommentUseCase,
-	ProvideAuthUseCase,
-	ProvideTokenProvider,
 	ProvideAssetUseCase,
 	ProvideFavoriteUseCase,
 	ProvideTagUseCase,
 )
 
-var ControllerSet = wire.NewSet(controller.NewUserController, controller.NewWorkController, controller.NewCommentController, controller.NewAuthController, controller.NewAssetController, controller.NewFavoriteController, controller.NewTagController)
+var ControllerSet = wire.NewSet(controller.NewUserController, controller.NewWorkController, controller.NewCommentController, controller.NewAssetController, controller.NewFavoriteController, controller.NewTagController)
 
 var InfrastructureSet = wire.NewSet(
 	ProvideDatabase,
-	ProvideS3Client, router.NewRouter, ProvideEcho,
+	ProvideS3Client, router.NewRouter, jwks.NewKeySet, ProvideEcho,
 )
 
 // ProviderSet は依存関係を定義します
@@ -123,22 +114,6 @@ func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.T
 // ProvideCommentUseCase はCommentUseCaseを提供します
 func ProvideCommentUseCase(commentRepo repository.CommentRepository, workRepo repository.WorkRepository) usecase.ICommentUsecase {
 	return usecase.NewCommentUsecase(commentRepo, workRepo, 30*time.Second)
-}
-
-// ProvideDiscordUseCase はDiscordUseCaseを提供します
-func ProvideAuthUseCase(authRepo repository.DiscordRepository, userRepo repository.UserRepository, tokenProvider usecase.TokenProvider, tokenRepo repository.TokenRepository, assetRepo repository.AssetRepository) usecase.IAuthUsecase {
-	return usecase.NewAuthUsecase(authRepo, userRepo, tokenProvider, tokenRepo, assetRepo)
-}
-
-// ProvideTokenProvider はTokenProviderを提供します
-func ProvideTokenProvider() usecase.TokenProvider {
-	return tokenProviderFunc(customejwt.GenerateToken)
-}
-
-type tokenProviderFunc func(userID uuid.UUID) (string, error)
-
-func (f tokenProviderFunc) GenerateToken(userID uuid.UUID) (string, error) {
-	return f(userID)
 }
 
 // ProvideAssetUseCase はAssetUseCaseを提供します

@@ -58,6 +58,21 @@ func (mr *MockIUserUseCaseMockRecorder) GetAllUser(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllUser", reflect.TypeOf((*MockIUserUseCase)(nil).GetAllUser), ctx)
 }
 
+// GetByDiscordUserID mocks base method.
+func (m *MockIUserUseCase) GetByDiscordUserID(ctx context.Context, discordUserID string) (*entity.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByDiscordUserID", ctx, discordUserID)
+	ret0, _ := ret[0].(*entity.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByDiscordUserID indicates an expected call of GetByDiscordUserID.
+func (mr *MockIUserUseCaseMockRecorder) GetByDiscordUserID(ctx, discordUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByDiscordUserID", reflect.TypeOf((*MockIUserUseCase)(nil).GetByDiscordUserID), ctx, discordUserID)
+}
+
 // GetByUserID mocks base method.
 func (m *MockIUserUseCase) GetByUserID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	m.ctrl.T.Helper()
@@ -71,6 +86,21 @@ func (m *MockIUserUseCase) GetByUserID(ctx context.Context, id uuid.UUID) (*enti
 func (mr *MockIUserUseCaseMockRecorder) GetByUserID(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserID", reflect.TypeOf((*MockIUserUseCase)(nil).GetByUserID), ctx, id)
+}
+
+// RegisterUser mocks base method.
+func (m *MockIUserUseCase) RegisterUser(ctx context.Context, discordUser entity.DiscordUser) (*entity.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegisterUser", ctx, discordUser)
+	ret0, _ := ret[0].(*entity.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RegisterUser indicates an expected call of RegisterUser.
+func (mr *MockIUserUseCaseMockRecorder) RegisterUser(ctx, discordUser any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterUser", reflect.TypeOf((*MockIUserUseCase)(nil).RegisterUser), ctx, discordUser)
 }
 
 // UpdateUser mocks base method.

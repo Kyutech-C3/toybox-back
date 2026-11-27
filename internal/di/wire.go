@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/google/uuid"
 	"github.com/google/wire"
 	"github.com/labstack/echo/v4"
 	"github.com/uptrace/bun"
@@ -18,11 +17,9 @@ import (
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/comment"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/favorite"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/tag"
-	"github.com/simesaba80/toybox-back/internal/infrastructure/database/token"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/user"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/database/work"
-	customejwt "github.com/simesaba80/toybox-back/internal/infrastructure/external/custome-jwt"
-	"github.com/simesaba80/toybox-back/internal/infrastructure/external/oauth"
+	"github.com/simesaba80/toybox-back/internal/infrastructure/external/jwks"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/external/webhook"
 	"github.com/simesaba80/toybox-back/internal/infrastructure/router"
 	"github.com/simesaba80/toybox-back/internal/interface/controller"
@@ -38,10 +35,6 @@ var RepositorySet = wire.NewSet(
 	wire.Bind(new(repository.WorkRepository), new(*work.WorkRepository)),
 	comment.NewCommentRepository,
 	wire.Bind(new(repository.CommentRepository), new(*comment.CommentRepository)),
-	oauth.NewDiscordRepository,
-	wire.Bind(new(repository.DiscordRepository), new(*oauth.DiscordRepository)),
-	token.NewTokenRepository,
-	wire.Bind(new(repository.TokenRepository), new(*token.TokenRepository)),
 	asset.NewAssetRepository,
 	wire.Bind(new(repository.AssetRepository), new(*asset.AssetRepository)),
 	favorite.NewFavoriteRepository,
@@ -56,8 +49,6 @@ var UseCaseSet = wire.NewSet(
 	ProvideUserUseCase,
 	ProvideWorkUseCase,
 	ProvideCommentUseCase,
-	ProvideAuthUseCase,
-	ProvideTokenProvider,
 	ProvideAssetUseCase,
 	ProvideFavoriteUseCase,
 	ProvideTagUseCase,
@@ -67,7 +58,6 @@ var ControllerSet = wire.NewSet(
 	controller.NewUserController,
 	controller.NewWorkController,
 	controller.NewCommentController,
-	controller.NewAuthController,
 	controller.NewAssetController,
 	controller.NewFavoriteController,
 	controller.NewTagController,
@@ -77,6 +67,7 @@ var InfrastructureSet = wire.NewSet(
 	ProvideDatabase,
 	ProvideS3Client,
 	router.NewRouter,
+	jwks.NewKeySet,
 	ProvideEcho,
 )
 
@@ -113,22 +104,6 @@ func ProvideWorkUseCase(workRepo repository.WorkRepository, tagRepo repository.T
 // ProvideCommentUseCase はCommentUseCaseを提供します
 func ProvideCommentUseCase(commentRepo repository.CommentRepository, workRepo repository.WorkRepository) usecase.ICommentUsecase {
 	return usecase.NewCommentUsecase(commentRepo, workRepo, 30*time.Second)
-}
-
-// ProvideDiscordUseCase はDiscordUseCaseを提供します
-func ProvideAuthUseCase(authRepo repository.DiscordRepository, userRepo repository.UserRepository, tokenProvider usecase.TokenProvider, tokenRepo repository.TokenRepository, assetRepo repository.AssetRepository) usecase.IAuthUsecase {
-	return usecase.NewAuthUsecase(authRepo, userRepo, tokenProvider, tokenRepo, assetRepo)
-}
-
-// ProvideTokenProvider はTokenProviderを提供します
-func ProvideTokenProvider() usecase.TokenProvider {
-	return tokenProviderFunc(customejwt.GenerateToken)
-}
-
-type tokenProviderFunc func(userID uuid.UUID) (string, error)
-
-func (f tokenProviderFunc) GenerateToken(userID uuid.UUID) (string, error) {
-	return f(userID)
 }
 
 // ProvideAssetUseCase はAssetUseCaseを提供します

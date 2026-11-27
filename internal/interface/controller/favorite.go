@@ -30,7 +30,7 @@ func NewFavoriteController(favoriteUsecase usecase.IFavoriteUsecase) *FavoriteCo
 // @Success 201
 // @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Security BearerAuth
+// @Security CookieAuth
 // @Router /auth/works/:work_id/favorite [post]
 func (fc *FavoriteController) CreateFavorite(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
@@ -65,7 +65,7 @@ func (fc *FavoriteController) CreateFavorite(c echo.Context) error {
 // @Success 204
 // @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Security BearerAuth
+// @Security CookieAuth
 // @Router /auth/works/:work_id/favorite [delete]
 func (fc *FavoriteController) DeleteFavorite(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
@@ -126,7 +126,7 @@ func (fc *FavoriteController) CountFavoritesByWorkID(c echo.Context) error {
 // @Success 200 {object} schema.IsFavoriteResponse
 // @Failure 400 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Security BearerAuth
+// @Security CookieAuth
 // @Router /auth/works/:work_id/favorite/is-favorite [get]
 func (fc *FavoriteController) IsFavorite(c echo.Context) error {
 	workIDStr := c.Param("work_id")

@@ -49,7 +49,6 @@ func main() {
 		{name: "URLInfos", f: migration.MigrateURLInfos},
 		{name: "Favorites", f: migration.MigrateFavorites},
 		{name: "Thumbnails", f: migration.MigrateThumbnails},
-		{name: "Tokens", f: migration.MigrateTokens},
 	}
 
 	for _, mig := range migrationFuncs {

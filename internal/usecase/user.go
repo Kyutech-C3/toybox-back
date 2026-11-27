@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"time"
@@ -15,6 +16,8 @@ import (
 type IUserUseCase interface {
 	GetAllUser(ctx context.Context) ([]*entity.User, error)
 	GetByUserID(ctx context.Context, id uuid.UUID) (*entity.User, error)
+	GetByDiscordUserID(ctx context.Context, discordUserID string) (*entity.User, error)
+	RegisterUser(ctx context.Context, discordUser entity.DiscordUser) (*entity.User, error)
 	UpdateUser(ctx context.Context, userID uuid.UUID, displayName *string, profile *string, xUsername *string, githubID *string, avatar *multipart.FileHeader) (*entity.User, error)
 }
 
@@ -48,6 +51,27 @@ func (u *userUseCase) GetByUserID(ctx context.Context, id uuid.UUID) (*entity.Us
 		return nil, fmt.Errorf("failed to get user by ID %s: %w", id.String(), err)
 	}
 	return user, nil
+}
+
+func (u *userUseCase) GetByDiscordUserID(ctx context.Context, discordUserID string) (*entity.User, error) {
+	return u.repo.GetUserByDiscordUserID(ctx, discordUserID)
+}
+
+// RegisterUser は Discord ユーザーに対応するユーザーが未登録なら作成し、登録済みならそのまま返す。
+func (u *userUseCase) RegisterUser(ctx context.Context, discordUser entity.DiscordUser) (*entity.User, error) {
+	user, err := u.repo.GetUserByDiscordUserID(ctx, discordUser.ID)
+	if err == nil {
+		return user, nil
+	}
+	if !errors.Is(err, domainerrors.ErrUserNotFound) {
+		return nil, err
+	}
+	avatarURL, err := u.assetRepo.UploadAvatar(ctx, discordUser.ID, discordUser.AvatarHash)
+	if err != nil {
+		return nil, err
+	}
+	user = entity.NewUser(discordUser.Username, discordUser.Email, discordUser.Username, discordUser.ID, *avatarURL)
+	return u.repo.Create(ctx, user)
 }
 
 func (u *userUseCase) UpdateUser(ctx context.Context, userID uuid.UUID, displayName *string, profile *string, xUsername *string, githubID *string, avatar *multipart.FileHeader) (*entity.User, error) {

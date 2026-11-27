@@ -16,11 +16,7 @@ var (
 	POSTGRES_PASSWORD        string
 	POSTGRES_DB              string
 	POSTGRES_HOST            string
-	DISCORD_CLIENT_ID        string
-	DISCORD_CLIENT_SECRET    string
-	TOKEN_SECRET             string
-	DISCORD_GUILD_IDS        []string
-	REDIRECT_URL             string
+	AUTHENTICATOR_URL        string
 	S3_BUCKET                string
 	S3_DIR                   string
 	S3_BASE_URL              string
@@ -45,11 +41,7 @@ func LoadEnv() {
 	POSTGRES_PASSWORD = os.Getenv("POSTGRES_PASSWORD")
 	POSTGRES_DB = os.Getenv("POSTGRES_DB")
 	POSTGRES_HOST = os.Getenv("POSTGRES_HOST")
-	DISCORD_CLIENT_ID = os.Getenv("DISCORD_CLIENT_ID")
-	DISCORD_CLIENT_SECRET = os.Getenv("DISCORD_CLIENT_SECRET")
-	TOKEN_SECRET = os.Getenv("TOKEN_SECRET")
-	DISCORD_GUILD_IDS = strings.Split(os.Getenv("DISCORD_GUILD_IDS"), ",")
-	REDIRECT_URL = os.Getenv("REDIRECT_URL")
+	AUTHENTICATOR_URL = os.Getenv("AUTHENTICATOR_URL")
 	S3_BUCKET = os.Getenv("S3_BUCKET")
 	S3_DIR = os.Getenv("S3_DIR")
 	S3_BASE_URL = os.Getenv("S3_BASE_URL")

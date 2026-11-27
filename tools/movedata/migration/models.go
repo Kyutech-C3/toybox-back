@@ -97,12 +97,3 @@ type OldThumbnail struct {
 	WorkID        string `bun:"work_id,pk"`
 	AssetID       string `bun:"asset_id,pk"`
 }
-
-type OldToken struct {
-	bun.BaseModel `bun:"table:token"`
-	RefreshToken  string    `bun:"refresh_token,pk"`
-	UserID        string    `bun:"user_id"`
-	ExpiredAt     time.Time `bun:"expired_at"`
-	CreatedAt     time.Time `bun:"created_at"`
-	UpdatedAt     time.Time `bun:"updated_at"`
-}

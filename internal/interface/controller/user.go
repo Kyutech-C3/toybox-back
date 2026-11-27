@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"github.com/simesaba80/toybox-back/internal/domain/entity"
 	domainerrors "github.com/simesaba80/toybox-back/internal/domain/errors"
 	"github.com/simesaba80/toybox-back/internal/interface/schema"
 	"github.com/simesaba80/toybox-back/internal/usecase"
@@ -70,6 +71,50 @@ func (uc *UserController) GetUserByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, schema.ToUserResponse(user))
 }
 
+// ResolveCurrentUser は JWT の Subject(Discord ユーザーID) から登録済みユーザーを引き、claims.UserID に設定するミドルウェア。
+// 未登録の場合は UserID を空のまま次へ渡す。
+func (uc *UserController) ResolveCurrentUser(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		token, ok := c.Get("user").(*jwt.Token)
+		if !ok {
+			return next(c)
+		}
+		claims := token.Claims.(*schema.JWTCustomClaims)
+		user, err := uc.userusecase.GetByDiscordUserID(c.Request().Context(), claims.Subject)
+		if err != nil && !errors.Is(err, domainerrors.ErrUserNotFound) {
+			return handleUserError(err)
+		}
+		if user != nil {
+			claims.UserID = user.ID.String()
+		}
+		return next(c)
+	}
+}
+
+// RegisterCurrentUser godoc
+// @Summary Register the current authenticated user
+// @Description Create the user from the JWT claims if not registered yet. Idempotent.
+// @Tags users
+// @Produce json
+// @Success 200 {object} schema.GetCurrentUserResponse
+// @Failure 500 {object} echo.HTTPError
+// @Router /auth/users/me [put]
+// @Security CookieAuth
+func (uc *UserController) RegisterCurrentUser(c echo.Context) error {
+	claims := c.Get("user").(*jwt.Token).Claims.(*schema.JWTCustomClaims)
+	user, err := uc.userusecase.RegisterUser(c.Request().Context(), entity.DiscordUser{
+		ID:         claims.Subject,
+		Username:   claims.Username,
+		AvatarHash: claims.Avatar,
+		Email:      claims.Email,
+	})
+	if err != nil {
+		c.Logger().Error("Failed to register user:", err)
+		return handleUserError(err)
+	}
+	return c.JSON(http.StatusOK, schema.ToCurrentUserResponse(user))
+}
+
 // GetCurrentUser godoc
 // @Summary Get the current authenticated user
 // @Description Get the current authenticated user's ID, display name, and icon URL
@@ -80,7 +125,7 @@ func (uc *UserController) GetUserByID(c echo.Context) error {
 // @Failure 404 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /auth/users/me [get]
-// @Security BearerAuth
+// @Security CookieAuth
 func (uc *UserController) GetCurrentUser(c echo.Context) error {
 	token := c.Get("user").(*jwt.Token)
 	claims := token.Claims.(*schema.JWTCustomClaims)
@@ -112,7 +157,7 @@ func (uc *UserController) GetCurrentUser(c echo.Context) error {
 // @Failure 413 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
 // @Router /auth/users [patch]
-// @Security BearerAuth
+// @Security CookieAuth
 func (uc *UserController) UpdateUser(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*schema.JWTCustomClaims)

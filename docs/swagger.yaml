@@ -147,16 +147,6 @@ definitions:
       id:
         type: string
     type: object
-  github_com_simesaba80_toybox-back_internal_interface_schema.GetDiscordAuthURLResponse:
-    properties:
-      url:
-        type: string
-    type: object
-  github_com_simesaba80_toybox-back_internal_interface_schema.GetDiscordTokenResponse:
-    properties:
-      access_token:
-        type: string
-    type: object
   github_com_simesaba80_toybox-back_internal_interface_schema.GetUserOutput:
     properties:
       avatar_url:
@@ -509,88 +499,6 @@ paths:
       summary: Get works from the legacy API (v2)
       tags:
       - legacy-proxy
-  /auth/discord:
-    get:
-      description: Get Discord authentication URL
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetDiscordAuthURLResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/echo.HTTPError'
-      summary: Get Discord authentication URL
-      tags:
-      - auth
-  /auth/discord/callback:
-    get:
-      description: Get Discord token by code
-      parameters:
-      - description: Discord code
-        in: query
-        name: code
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetDiscordTokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/echo.HTTPError'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/echo.HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/echo.HTTPError'
-      summary: Get Discord token by code
-      tags:
-      - auth
-  /auth/logout:
-    post:
-      description: Logout user and invalidate refresh token
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/echo.HTTPError'
-      summary: Logout user
-      tags:
-      - auth
-  /auth/refresh:
-    post:
-      description: Regenerate token(need refresh token in cookie)
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetDiscordTokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/echo.HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/echo.HTTPError'
-      summary: Regenerate token
-      tags:
-      - auth
   /auth/tags:
     post:
       consumes:
@@ -623,7 +531,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Create a new tag
       tags:
       - tags
@@ -678,7 +586,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Update a user
       tags:
       - users
@@ -706,8 +614,26 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Get the current authenticated user
+      tags:
+      - users
+    put:
+      description: Create the user from the JWT claims if not registered yet. Idempotent.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_simesaba80_toybox-back_internal_interface_schema.GetCurrentUserResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+      security:
+      - CookieAuth: []
+      summary: Register the current authenticated user
       tags:
       - users
   /auth/works:
@@ -738,7 +664,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Create a new work
       tags:
       - works
@@ -767,7 +693,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Delete a favorite
       tags:
       - favorites
@@ -795,7 +721,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Create a favorite
       tags:
       - favorites
@@ -826,7 +752,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Check if a user has favorited a work
       tags:
       - favorites
@@ -859,7 +785,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Delete a work
       tags:
       - works
@@ -903,7 +829,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Update a work
       tags:
       - works
@@ -940,7 +866,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Upload an asset
       tags:
       - assets
@@ -1049,7 +975,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Get all works
       tags:
       - works
@@ -1115,7 +1041,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Get a work by ID
       tags:
       - works
@@ -1154,7 +1080,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Get comments for a work
       tags:
       - comments
@@ -1199,7 +1125,7 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Create a comment for a work
       tags:
       - comments
@@ -1236,14 +1162,14 @@ paths:
           schema:
             $ref: '#/definitions/echo.HTTPError'
       security:
-      - BearerAuth: []
+      - CookieAuth: []
       summary: Get works by user ID
       tags:
       - works
 securityDefinitions:
-  BearerAuth:
-    description: Bearer token for authentication
-    in: header
-    name: Authorization
+  CookieAuth:
+    description: JWT issued by Authenticator
+    in: cookie
+    name: toybox_token
     type: apiKey
 swagger: "2.0"

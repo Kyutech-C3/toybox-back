@@ -5,10 +5,10 @@ package main
 // @description This is the API server for the Toybox application.
 // @host localhost:8080
 // @BasePath /
-// @SecurityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description Bearer token for authentication
+// @SecurityDefinitions.apikey CookieAuth
+// @in cookie
+// @name toybox_token
+// @description JWT issued by Authenticator
 
 import (
 	"context"

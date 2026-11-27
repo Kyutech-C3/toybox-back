@@ -352,10 +352,9 @@ S3 へ保存するオブジェクトの Content-Type には、拡張子に対応
 
 - 現時点では前 ToyBox と同様に Discord 認証のみを組み込むことを予定しています。
 - Email 認証やその他の認証、SSO などは組み込みません。
-- Discordのアクセストークン取得後は Discord API (`/users/@me`) を通じてユーザー情報を取得し、アプリケーション側のユーザー作成に利用します。
-- Discordから取得したアクセストークンを `Bearer [アクセストークン]`としてAuthorizationヘッダーに格納し`/auth/discord/callback`に送信する必要があります
-- Discordによるログイン後は、アプリケーション側でJWTトークン、リフレッシュトークンを発行しこれにより管理を行います。
-- トークンの確認にはechoが提供しているjwtのミドルウェアを使います。(https://echo.labstack.com/docs/middleware/jwt)
+- Discord OAuth とJWTの発行は別サービスの Authenticator が担当します。JWT (Ed25519署名) は HttpOnly Cookie `toybox_token` で送られます。
+- Backend は Authenticator の `/.well-known/jwks.json` から公開鍵を取得し、echoのjwtミドルウェアで検証します。公開鍵は起動時と署名検証失敗時に取得します。(https://echo.labstack.com/docs/middleware/jwt)
+- JWT の Subject は Discord のユーザーIDです。ログイン直後にフロントエンドが `PUT /auth/users/me` を呼び、未登録ならユーザーを作成します。
 - 旧ToyBox向けプロキシは公開された読み取りAPIだけを対象とし、現ToyBoxの認証情報を旧システムへ転送しません。また旧システムからのCookieをクライアントへ転送しません。
 
 # 運用方針

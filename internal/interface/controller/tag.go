@@ -33,7 +33,7 @@ func NewTagController(tagUsecase usecase.ITagUseCase) *TagController {
 // @Failure 400 {object} echo.HTTPError
 // @Failure 401 {object} echo.HTTPError
 // @Failure 500 {object} echo.HTTPError
-// @Security BearerAuth
+// @Security CookieAuth
 // @Router /auth/tags [post]
 func (tc *TagController) CreateTag(c echo.Context) error {
 	var input schema.CreateTagInput
